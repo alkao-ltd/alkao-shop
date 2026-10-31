@@ -15,13 +15,17 @@
     .cache { display: none; }
     input { width: 100%; padding: 12px; margin: 8px 0; font-size: 16px; border: 1px solid #bbb; border-radius: 8px; }
     button { width: 100%; padding: 12px; margin-top: 8px; font-size: 16px; border: none; border-radius: 8px; background: #1b6ef3; color: white; }
-    button.lien { background: none; color: #1b6ef3; }
+    button.lien { background: none; color: #1b6ef3; width: auto; padding: 8px 0; margin: 0 0 8px 0; }
     button.gris { background: #777; }
-    button.danger { background: #c0392b; width: auto; margin: 0; padding: 8px 12px; font-size: 14px; }
-    #message, #message-boutique { color: #c0392b; min-height: 20px; }
+    button.petit { width: auto; margin: 0; padding: 8px 12px; font-size: 14px; }
+    button.danger { background: #c0392b; }
+    #message, #message-boutique, #message-produit { color: #c0392b; min-height: 20px; }
+    h3 { margin: 16px 0 4px 0; }
     ul { list-style: none; padding: 0; margin: 12px 0; }
     li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid #eee; }
-    li span { font-size: 16px; word-break: break-word; }
+    li span, .info { font-size: 16px; word-break: break-word; }
+    .info small { display: block; color: #555; margin-top: 4px; font-size: 14px; }
+    .actions { display: flex; gap: 6px; flex-shrink: 0; }
     .vide { color: #777; }
   </style>
 </head>
@@ -49,6 +53,20 @@
       <ul id="liste-boutiques"></ul>
       <button id="btn-deco" class="gris">Se déconnecter</button>
     </div>
+
+    <div id="ecran-boutique" class="carte cache">
+      <button id="btn-retour" class="lien">← Mes boutiques</button>
+      <h2 id="titre-boutique"></h2>
+      <h3 id="titre-formulaire">Ajouter un produit</h3>
+      <input id="nom-produit" type="text" placeholder="Nom du produit" maxlength="60">
+      <input id="prix-produit" type="number" inputmode="numeric" min="0" placeholder="Prix (FCFA)">
+      <input id="stock-produit" type="number" inputmode="numeric" min="0" placeholder="Quantité en stock">
+      <button id="btn-enregistrer-produit">Ajouter le produit</button>
+      <button id="btn-annuler" class="gris cache">Annuler la modification</button>
+      <p id="message-produit"></p>
+      <h3>Mes produits</h3>
+      <ul id="liste-produits"></ul>
+    </div>
   </main>
 
   <script type="module">
@@ -64,7 +82,10 @@
       getFirestore,
       collection,
       addDoc,
+      updateDoc,
       deleteDoc,
+      getDocs,
+      writeBatch,
       doc,
       onSnapshot,
       query,
@@ -87,6 +108,7 @@
 
     const ecranConnexion = document.getElementById("ecran-connexion");
     const ecranAccueil = document.getElementById("ecran-accueil");
+    const ecranBoutique = document.getElementById("ecran-boutique");
     const titre = document.getElementById("titre");
     const champEmail = document.getElementById("email");
     const champMdp = document.getElementById("mdp");
@@ -99,10 +121,28 @@
     const btnAjouter = document.getElementById("btn-ajouter");
     const messageBoutique = document.getElementById("message-boutique");
     const listeBoutiques = document.getElementById("liste-boutiques");
+    const btnRetour = document.getElementById("btn-retour");
+    const titreBoutique = document.getElementById("titre-boutique");
+    const titreFormulaire = document.getElementById("titre-formulaire");
+    const champNomProduit = document.getElementById("nom-produit");
+    const champPrix = document.getElementById("prix-produit");
+    const champStock = document.getElementById("stock-produit");
+    const btnEnregistrerProduit = document.getElementById("btn-enregistrer-produit");
+    const btnAnnuler = document.getElementById("btn-annuler");
+    const messageProduit = document.getElementById("message-produit");
+    const listeProduits = document.getElementById("liste-produits");
 
     let modeInscription = false;
     let utilisateurActuel = null;
-    let arreterEcoute = null;
+    let arreterEcouteBoutiques = null;
+    let arreterEcouteProduits = null;
+    let boutiqueActuelle = null;
+    let produitEnModification = null;
+
+    function montrer(ecran) {
+      [ecranConnexion, ecranAccueil, ecranBoutique].forEach((e) => e.classList.add("cache"));
+      ecran.classList.remove("cache");
+    }
 
     function erreurEnFrancais(code) {
       const erreurs = {
@@ -152,6 +192,10 @@
       return collection(db, "users", utilisateurActuel.uid, "boutiques");
     }
 
+    function dossierProduits() {
+      return collection(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits");
+    }
+
     btnAjouter.addEventListener("click", async () => {
       messageBoutique.textContent = "";
       const nom = champNomBoutique.value.trim();
@@ -169,6 +213,17 @@
       btnAjouter.disabled = false;
     });
 
+    async function supprimerBoutique(id) {
+      const produits = await getDocs(collection(db, "users", utilisateurActuel.uid, "boutiques", id, "produits"));
+      const liste = produits.docs;
+      for (let i = 0; i < liste.length; i += 400) {
+        const lot = writeBatch(db);
+        liste.slice(i, i + 400).forEach((d) => lot.delete(d.ref));
+        await lot.commit();
+      }
+      await deleteDoc(doc(db, "users", utilisateurActuel.uid, "boutiques", id));
+    }
+
     function afficherBoutiques(instantane) {
       listeBoutiques.innerHTML = "";
       if (instantane.empty) {
@@ -178,50 +233,208 @@
         listeBoutiques.appendChild(vide);
         return;
       }
-      instantane.forEach((document_) => {
+      instantane.forEach((d) => {
+        const nomBoutique = d.data().nom;
         const li = document.createElement("li");
         const nom = document.createElement("span");
-        nom.textContent = document_.data().nom;
-        const btn = document.createElement("button");
-        btn.className = "danger";
-        btn.textContent = "Supprimer";
-        btn.addEventListener("click", async () => {
-          if (!confirm("Supprimer la boutique « " + document_.data().nom + " » ?")) return;
+        nom.textContent = nomBoutique;
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const btnOuvrir = document.createElement("button");
+        btnOuvrir.className = "petit";
+        btnOuvrir.textContent = "Ouvrir";
+        btnOuvrir.addEventListener("click", () => ouvrirBoutique(d.id, nomBoutique));
+
+        const btnSupprimer = document.createElement("button");
+        btnSupprimer.className = "petit danger";
+        btnSupprimer.textContent = "Supprimer";
+        btnSupprimer.addEventListener("click", async () => {
+          if (!confirm("Supprimer la boutique « " + nomBoutique + " » et tous ses produits ?")) return;
+          messageBoutique.textContent = "";
           try {
-            await deleteDoc(doc(db, "users", utilisateurActuel.uid, "boutiques", document_.id));
+            await supprimerBoutique(d.id);
           } catch (e) {
             messageBoutique.textContent = "Impossible de supprimer. Réessaie.";
           }
         });
+
+        actions.appendChild(btnOuvrir);
+        actions.appendChild(btnSupprimer);
         li.appendChild(nom);
-        li.appendChild(btn);
+        li.appendChild(actions);
         listeBoutiques.appendChild(li);
       });
     }
 
-    onAuthStateChanged(auth, (utilisateur) => {
-      if (arreterEcoute) {
-        arreterEcoute();
-        arreterEcoute = null;
+    function reinitialiserFormulaire() {
+      produitEnModification = null;
+      champNomProduit.value = "";
+      champPrix.value = "";
+      champStock.value = "";
+      titreFormulaire.textContent = "Ajouter un produit";
+      btnEnregistrerProduit.textContent = "Ajouter le produit";
+      btnAnnuler.classList.add("cache");
+      messageProduit.textContent = "";
+    }
+
+    function ouvrirBoutique(id, nom) {
+      boutiqueActuelle = { id: id, nom: nom };
+      titreBoutique.textContent = nom;
+      reinitialiserFormulaire();
+      listeProduits.innerHTML = "";
+      montrer(ecranBoutique);
+      if (arreterEcouteProduits) arreterEcouteProduits();
+      const requete = query(dossierProduits(), orderBy("creeLe"));
+      arreterEcouteProduits = onSnapshot(
+        requete,
+        afficherProduits,
+        () => { messageProduit.textContent = "Impossible de charger les produits."; }
+      );
+    }
+
+    function fermerBoutique() {
+      if (arreterEcouteProduits) {
+        arreterEcouteProduits();
+        arreterEcouteProduits = null;
       }
+      boutiqueActuelle = null;
+      reinitialiserFormulaire();
+      listeProduits.innerHTML = "";
+    }
+
+    btnRetour.addEventListener("click", () => {
+      fermerBoutique();
+      montrer(ecranAccueil);
+    });
+
+    function formaterFcfa(n) {
+      return Number(n).toLocaleString("fr-FR") + " FCFA";
+    }
+
+    function afficherProduits(instantane) {
+      listeProduits.innerHTML = "";
+      if (instantane.empty) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucun produit pour le moment.";
+        listeProduits.appendChild(vide);
+        return;
+      }
+      instantane.forEach((d) => {
+        const p = d.data();
+        const li = document.createElement("li");
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const nom = document.createElement("strong");
+        nom.textContent = p.nom;
+        const detail = document.createElement("small");
+        detail.textContent = formaterFcfa(p.prix) + " · Stock : " + p.stock;
+        info.appendChild(nom);
+        info.appendChild(detail);
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const btnModifier = document.createElement("button");
+        btnModifier.className = "petit";
+        btnModifier.textContent = "Modifier";
+        btnModifier.addEventListener("click", () => {
+          produitEnModification = d.id;
+          champNomProduit.value = p.nom;
+          champPrix.value = p.prix;
+          champStock.value = p.stock;
+          titreFormulaire.textContent = "Modifier le produit";
+          btnEnregistrerProduit.textContent = "Enregistrer les changements";
+          btnAnnuler.classList.remove("cache");
+          messageProduit.textContent = "";
+          champNomProduit.focus();
+        });
+
+        const btnSupprimer = document.createElement("button");
+        btnSupprimer.className = "petit danger";
+        btnSupprimer.textContent = "Supprimer";
+        btnSupprimer.addEventListener("click", async () => {
+          if (!confirm("Supprimer le produit « " + p.nom + " » ?")) return;
+          messageProduit.textContent = "";
+          try {
+            await deleteDoc(doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", d.id));
+            if (produitEnModification === d.id) reinitialiserFormulaire();
+          } catch (e) {
+            messageProduit.textContent = "Impossible de supprimer. Réessaie.";
+          }
+        });
+
+        actions.appendChild(btnModifier);
+        actions.appendChild(btnSupprimer);
+        li.appendChild(info);
+        li.appendChild(actions);
+        listeProduits.appendChild(li);
+      });
+    }
+
+    btnAnnuler.addEventListener("click", reinitialiserFormulaire);
+
+    btnEnregistrerProduit.addEventListener("click", async () => {
+      messageProduit.textContent = "";
+      const nom = champNomProduit.value.trim();
+      const prix = Number(champPrix.value);
+      const stock = Number(champStock.value);
+
+      if (nom.length === 0) {
+        messageProduit.textContent = "Écris le nom du produit.";
+        return;
+      }
+      if (champPrix.value === "" || !Number.isInteger(prix) || prix < 0 || prix > 100000000) {
+        messageProduit.textContent = "Prix invalide : écris un nombre entier en FCFA.";
+        return;
+      }
+      if (champStock.value === "" || !Number.isInteger(stock) || stock < 0 || stock > 1000000) {
+        messageProduit.textContent = "Stock invalide : écris un nombre entier.";
+        return;
+      }
+
+      btnEnregistrerProduit.disabled = true;
+      try {
+        if (produitEnModification) {
+          await updateDoc(
+            doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", produitEnModification),
+            { nom: nom, prix: prix, stock: stock, modifieLe: serverTimestamp() }
+          );
+        } else {
+          await addDoc(dossierProduits(), { nom: nom, prix: prix, stock: stock, creeLe: serverTimestamp() });
+        }
+        reinitialiserFormulaire();
+      } catch (e) {
+        messageProduit.textContent = "Impossible d'enregistrer. Vérifie ta connexion.";
+      }
+      btnEnregistrerProduit.disabled = false;
+    });
+
+    onAuthStateChanged(auth, (utilisateur) => {
+      if (arreterEcouteBoutiques) {
+        arreterEcouteBoutiques();
+        arreterEcouteBoutiques = null;
+      }
+      fermerBoutique();
       utilisateurActuel = utilisateur;
       if (utilisateur) {
         qui.textContent = "Connecté : " + utilisateur.email;
-        ecranConnexion.classList.add("cache");
-        ecranAccueil.classList.remove("cache");
+        montrer(ecranAccueil);
         const requete = query(dossierBoutiques(), orderBy("creeLe"));
-        arreterEcoute = onSnapshot(
+        arreterEcouteBoutiques = onSnapshot(
           requete,
           afficherBoutiques,
           () => { messageBoutique.textContent = "Impossible de charger tes boutiques."; }
         );
       } else {
-        ecranAccueil.classList.add("cache");
-        ecranConnexion.classList.remove("cache");
+        montrer(ecranConnexion);
         listeBoutiques.innerHTML = "";
         champMdp.value = "";
       }
     });
   </script>
 </body>
-        </html>
+  </html>
