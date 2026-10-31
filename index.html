@@ -16,7 +16,13 @@
     input { width: 100%; padding: 12px; margin: 8px 0; font-size: 16px; border: 1px solid #bbb; border-radius: 8px; }
     button { width: 100%; padding: 12px; margin-top: 8px; font-size: 16px; border: none; border-radius: 8px; background: #1b6ef3; color: white; }
     button.lien { background: none; color: #1b6ef3; }
-    #message { color: #c0392b; min-height: 20px; }
+    button.gris { background: #777; }
+    button.danger { background: #c0392b; width: auto; margin: 0; padding: 8px 12px; font-size: 14px; }
+    #message, #message-boutique { color: #c0392b; min-height: 20px; }
+    ul { list-style: none; padding: 0; margin: 12px 0; }
+    li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid #eee; }
+    li span { font-size: 16px; word-break: break-word; }
+    .vide { color: #777; }
   </style>
 </head>
 <body>
@@ -35,10 +41,13 @@
     </div>
 
     <div id="ecran-accueil" class="carte cache">
-      <h2>Bienvenue !</h2>
       <p id="qui"></p>
-      <p>Les produits arrivent à la prochaine étape.</p>
-      <button id="btn-deco">Se déconnecter</button>
+      <h2>Mes boutiques</h2>
+      <input id="nom-boutique" type="text" placeholder="Nom de la boutique" maxlength="60">
+      <button id="btn-ajouter">Ajouter la boutique</button>
+      <p id="message-boutique"></p>
+      <ul id="liste-boutiques"></ul>
+      <button id="btn-deco" class="gris">Se déconnecter</button>
     </div>
   </main>
 
@@ -51,6 +60,17 @@
       signOut,
       onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      deleteDoc,
+      doc,
+      onSnapshot,
+      query,
+      orderBy,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyA5pfMUT8xnSNeRAhgR5dbGRnXx_Itn09o",
@@ -63,19 +83,26 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
     const ecranConnexion = document.getElementById("ecran-connexion");
     const ecranAccueil = document.getElementById("ecran-accueil");
     const titre = document.getElementById("titre");
     const champEmail = document.getElementById("email");
-    const champMdp =document.getElementById("mdp");
+    const champMdp = document.getElementById("mdp");
     const btnPrincipal = document.getElementById("btn-principal");
     const btnBascule = document.getElementById("btn-bascule");
     const btnDeco = document.getElementById("btn-deco");
     const message = document.getElementById("message");
     const qui = document.getElementById("qui");
+    const champNomBoutique = document.getElementById("nom-boutique");
+    const btnAjouter = document.getElementById("btn-ajouter");
+    const messageBoutique = document.getElementById("message-boutique");
+    const listeBoutiques = document.getElementById("liste-boutiques");
 
     let modeInscription = false;
+    let utilisateurActuel = null;
+    let arreterEcoute = null;
 
     function erreurEnFrancais(code) {
       const erreurs = {
@@ -121,17 +148,80 @@
 
     btnDeco.addEventListener("click", () => signOut(auth));
 
+    function dossierBoutiques() {
+      return collection(db, "users", utilisateurActuel.uid, "boutiques");
+    }
+
+    btnAjouter.addEventListener("click", async () => {
+      messageBoutique.textContent = "";
+      const nom = champNomBoutique.value.trim();
+      if (nom.length === 0) {
+        messageBoutique.textContent = "Écris le nom de la boutique.";
+        return;
+      }
+      btnAjouter.disabled = true;
+      try {
+        await addDoc(dossierBoutiques(), { nom: nom, creeLe: serverTimestamp() });
+        champNomBoutique.value = "";
+      } catch (e) {
+        messageBoutique.textContent = "Impossible d'ajouter. Vérifie ta connexion.";
+      }
+      btnAjouter.disabled = false;
+    });
+
+    function afficherBoutiques(instantane) {
+      listeBoutiques.innerHTML = "";
+      if (instantane.empty) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucune boutique pour le moment.";
+        listeBoutiques.appendChild(vide);
+        return;
+      }
+      instantane.forEach((document_) => {
+        const li = document.createElement("li");
+        const nom = document.createElement("span");
+        nom.textContent = document_.data().nom;
+        const btn = document.createElement("button");
+        btn.className = "danger";
+        btn.textContent = "Supprimer";
+        btn.addEventListener("click", async () => {
+          if (!confirm("Supprimer la boutique « " + document_.data().nom + " » ?")) return;
+          try {
+            await deleteDoc(doc(db, "users", utilisateurActuel.uid, "boutiques", document_.id));
+          } catch (e) {
+            messageBoutique.textContent = "Impossible de supprimer. Réessaie.";
+          }
+        });
+        li.appendChild(nom);
+        li.appendChild(btn);
+        listeBoutiques.appendChild(li);
+      });
+    }
+
     onAuthStateChanged(auth, (utilisateur) => {
+      if (arreterEcoute) {
+        arreterEcoute();
+        arreterEcoute = null;
+      }
+      utilisateurActuel = utilisateur;
       if (utilisateur) {
         qui.textContent = "Connecté : " + utilisateur.email;
         ecranConnexion.classList.add("cache");
         ecranAccueil.classList.remove("cache");
+        const requete = query(dossierBoutiques(), orderBy("creeLe"));
+        arreterEcoute = onSnapshot(
+          requete,
+          afficherBoutiques,
+          () => { messageBoutique.textContent = "Impossible de charger tes boutiques."; }
+        );
       } else {
         ecranAccueil.classList.add("cache");
         ecranConnexion.classList.remove("cache");
+        listeBoutiques.innerHTML = "";
         champMdp.value = "";
       }
     });
   </script>
 </body>
-</html> 
+        </html>
