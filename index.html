@@ -68,4 +68,70 @@
     const ecranAccueil = document.getElementById("ecran-accueil");
     const titre = document.getElementById("titre");
     const champEmail = document.getElementById("email");
-    const champMdp = docum
+    const champMdp =document.getElementById("mdp");
+    const btnPrincipal = document.getElementById("btn-principal");
+    const btnBascule = document.getElementById("btn-bascule");
+    const btnDeco = document.getElementById("btn-deco");
+    const message = document.getElementById("message");
+    const qui = document.getElementById("qui");
+
+    let modeInscription = false;
+
+    function erreurEnFrancais(code) {
+      const erreurs = {
+        "auth/invalid-credential": "Email ou mot de passe incorrect.",
+        "auth/invalid-email": "Cet email n'est pas valide.",
+        "auth/email-already-in-use": "Cet email a déjà un compte.",
+        "auth/weak-password": "Mot de passe trop court (6 caractères minimum).",
+        "auth/missing-password": "Écris ton mot de passe.",
+        "auth/network-request-failed": "Pas de connexion internet.",
+        "auth/too-many-requests": "Trop d'essais. Attends un moment."
+      };
+      return erreurs[code] || "Une erreur est survenue. Réessaie.";
+    }
+
+    btnBascule.addEventListener("click", () => {
+      modeInscription = !modeInscription;
+      message.textContent = "";
+      if (modeInscription) {
+        titre.textContent = "Créer un compte";
+        btnPrincipal.textContent = "Créer mon compte";
+        btnBascule.textContent = "J'ai déjà un compte";
+      } else {
+        titre.textContent = "Connexion";
+        btnPrincipal.textContent = "Se connecter";
+        btnBascule.textContent = "Pas de compte ? Créer un compte";
+      }
+    });
+
+    btnPrincipal.addEventListener("click", async () => {
+      message.textContent = "";
+      const email = champEmail.value.trim();
+      const mdp = champMdp.value;
+      try {
+        if (modeInscription) {
+          await createUserWithEmailAndPassword(auth, email, mdp);
+        } else {
+          await signInWithEmailAndPassword(auth, email, mdp);
+        }
+      } catch (e) {
+        message.textContent = erreurEnFrancais(e.code);
+      }
+    });
+
+    btnDeco.addEventListener("click", () => signOut(auth));
+
+    onAuthStateChanged(auth, (utilisateur) => {
+      if (utilisateur) {
+        qui.textContent = "Connecté : " + utilisateur.email;
+        ecranConnexion.classList.add("cache");
+        ecranAccueil.classList.remove("cache");
+      } else {
+        ecranAccueil.classList.add("cache");
+        ecranConnexion.classList.remove("cache");
+        champMdp.value = "";
+      }
+    });
+  </script>
+</body>
+</html> 
