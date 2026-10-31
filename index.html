@@ -1,1 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1b6ef3">
+  <title>Alkao Shop</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; background: #f2f4f8; color: #222; }
+    header { background: #1b6ef3; color: white; padding: 16px; text-align: center; }
+    header h1 { margin: 0; font-size: 22px; }
+    main { padding: 16px; max-width: 420px; margin: 0 auto; }
+    .carte { background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
+    .cache { display: none; }
+    input { width: 100%; padding: 12px; margin: 8px 0; font-size: 16px; border: 1px solid #bbb; border-radius: 8px; }
+    button { width: 100%; padding: 12px; margin-top: 8px; font-size: 16px; border: none; border-radius: 8px; background: #1b6ef3; color: white; }
+    button.lien { background: none; color: #1b6ef3; }
+    #message { color: #c0392b; min-height: 20px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Alkao Shop</h1>
+  </header>
 
+  <main>
+    <div id="ecran-connexion" class="carte">
+      <h2 id="titre">Connexion</h2>
+      <input id="email" type="email" placeholder="Email" autocomplete="email">
+      <input id="mdp" type="password" placeholder="Mot de passe (6 caractères minimum)" autocomplete="current-password">
+      <button id="btn-principal">Se connecter</button>
+      <button id="btn-bascule" class="lien">Pas de compte ? Créer un compte</button>
+      <p id="message"></p>
+    </div>
+
+    <div id="ecran-accueil" class="carte cache">
+      <h2>Bienvenue !</h2>
+      <p id="qui"></p>
+      <p>Les produits arrivent à la prochaine étape.</p>
+      <button id="btn-deco">Se déconnecter</button>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA5pfMUT8xnSNeRAhgR5dbGRnXx_Itn09o",
+      authDomain: "alka-shop-e10e2.firebaseapp.com",
+      projectId: "alka-shop-e10e2",
+      storageBucket: "alka-shop-e10e2.firebasestorage.app",
+      messagingSenderId: "170951024988",
+      appId: "1:170951024988:web:ff001f15fd2b0924ca6199"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    const ecranConnexion = document.getElementById("ecran-connexion");
+    const ecranAccueil = document.getElementById("ecran-accueil");
+    const titre = document.getElementById("titre");
+    const champEmail = document.getElementById("email");
+    const champMdp = docum
