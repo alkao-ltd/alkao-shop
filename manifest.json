@@ -1,0 +1,18 @@
+{
+  "name": "Alkao Shop",
+  "short_name": "Alkao Shop",
+  "description": "Gestion de boutiques et de grands magasins",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#080808",
+  "theme_color": "#1b6ef3",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
