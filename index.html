@@ -35,6 +35,11 @@
     .vide { color: #777; }
     .bloc-vente { background: #eef7f0; border-radius: 10px; padding: 12px; margin-top: 8px; }
     .bloc-vente h3 { margin-top: 0; }
+    .alerte { background: #fdecea; border: 1px solid #e6a39b; color: #922b21; border-radius: 10px; padding: 10px 12px; margin: 12px 0; }
+    .alerte strong { display: block; margin-bottom: 4px; }
+    .alerte div { font-size: 15px; margin-top: 2px; }
+    .etiquette { display: inline-block; background: #c0392b; color: white; border-radius: 6px; font-size: 12px; padding: 2px 6px; margin-left: 6px; vertical-align: middle; }
+    .astuce { color: #888; }
   </style>
 </head>
 <body>
@@ -67,6 +72,8 @@
       <button id="btn-retour" class="lien">← Mes boutiques</button>
       <h2 id="titre-boutique"></h2>
 
+      <div id="alerte-stock" class="alerte cache"></div>
+
       <div class="bloc-vente">
         <h3>Enregistrer une vente</h3>
         <select id="vente-produit"></select>
@@ -79,6 +86,7 @@
       <input id="nom-produit" type="text" placeholder="Nom du produit" maxlength="60">
       <input id="prix-produit" type="number" inputmode="numeric" min="0" placeholder="Prix (FCFA)">
       <input id="stock-produit" type="number" inputmode="numeric" min="0" placeholder="Quantité en stock">
+      <input id="stock-depart-produit" type="number" inputmode="numeric" min="0" placeholder="Stock de départ (alerte à 25 %)">
       <button id="btn-enregistrer-produit">Ajouter le produit</button>
       <button id="btn-annuler" class="gris cache">Annuler la modification</button>
       <p id="message-produit"></p>
@@ -151,6 +159,7 @@
     const champNomProduit = document.getElementById("nom-produit");
     const champPrix = document.getElementById("prix-produit");
     const champStock = document.getElementById("stock-produit");
+    const champStockDepart = document.getElementById("stock-depart-produit");
     const btnEnregistrerProduit = document.getElementById("btn-enregistrer-produit");
     const btnAnnuler = document.getElementById("btn-annuler");
     const messageProduit = document.getElementById("message-produit");
@@ -160,6 +169,7 @@
     const btnVendre = document.getElementById("btn-vendre");
     const messageVente = document.getElementById("message-vente");
     const listeVentes = document.getElementById("liste-ventes");
+    const blocAlerte = document.getElementById("alerte-stock");
 
     let modeInscription = false;
     let utilisateurActuel = null;
@@ -228,6 +238,1873 @@
     }
 
     function dossierVentes() {
+      return collection(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "ventes");
+    }
+
+    // Alerte : il reste un quart (25 %) ou moins du stock de départ
+    function enAlerte(stock, stockDepart) {
+      return Number.isInteger(stockDepart) && stockDepart > 0 && stock <= stockDepart * 0.25;
+    }
+
+    btnAjouter.addEventListener("click", async () => {
+      messageBoutique.textContent = "";
+      const nom = champNomBoutique.value.trim();
+      if (nom.length === 0) {
+        messageBoutique.textContent = "Écris le nom de la boutique.";
+        return;
+      }
+      btnAjouter.disabled = true;
+      try {
+        await addDoc(dossierBoutiques(), { nom: nom, creeLe: serverTimestamp() });
+        champNomBoutique.value = "";
+      } catch (e) {
+        messageBoutique.textContent = "Impossible d'ajouter. Vérifie ta connexion.";
+      }
+      btnAjouter.disabled = false;
+    });
+
+    async function supprimerBoutique(id) {
+      for (const nomDossier of ["produits", "ventes"]) {
+        const contenu = await getDocs(collection(db, "users", utilisateurActuel.uid, "boutiques", id, nomDossier));
+        const liste = contenu.docs;
+        for (let i = 0; i < liste.length; i += 400) {
+          const lot = writeBatch(db);
+          liste.slice(i, i + 400).forEach((d) => lot.delete(d.ref));
+          await lot.commit();
+        }
+      }
+      await deleteDoc(doc(db, "users", utilisateurActuel.uid, "boutiques", id));
+    }
+
+    function afficherBoutiques(instantane) {
+      listeBoutiques.innerHTML = "";
+      if (instantane.empty) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucune boutique pour le moment.";
+        listeBoutiques.appendChild(vide);
+        return;
+      }
+      instantane.forEach((d) => {
+        const nomBoutique = d.data().nom;
+        const li = document.createElement("li");
+        const nom = document.createElement("span");
+        nom.textContent = nomBoutique;
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const btnOuvrir = document.createElement("button");
+        btnOuvrir.className = "petit";
+        btnOuvrir.textContent = "Ouvrir";
+        btnOuvrir.addEventListener("click", () => ouvrirBoutique(d.id, nomBoutique));
+
+        const btnSupprimer = document.createElement("button");
+        btnSupprimer.className = "petit danger";
+        btnSupprimer.textContent = "Supprimer";
+        btnSupprimer.addEventListener("click", async () => {
+          if (!confirm("Supprimer la boutique « " + nomBoutique + " », ses produits et ses ventes ?")) return;
+          messageBoutique.textContent = "";
+          try {
+            await supprimerBoutique(d.id);
+          } catch (e) {
+            messageBoutique.textContent = "Impossible de supprimer. Réessaie.";
+          }
+        });
+
+        actions.appendChild(btnOuvrir);
+        actions.appendChild(btnSupprimer);
+        li.appendChild(nom);
+        li.appendChild(actions);
+        listeBoutiques.appendChild(li);
+      });
+    }
+
+    function reinitialiserFormulaire() {
+      produitEnModification = null;
+      champNomProduit.value = "";
+      champPrix.value = "";
+      champStock.value = "";
+      champStockDepart.value = "";
+      titreFormulaire.textContent = "Ajouter un produit";
+      btnEnregistrerProduit.textContent = "Ajouter le produit";
+      btnAnnuler.classList.add("cache");
+      messageProduit.textContent = "";
+    }
+
+    function reinitialiserVente() {
+      champVenteQuantite.value = "";
+      messageVente.textContent = "";
+      messageVente.style.color = "";
+    }
+
+    function ouvrirBoutique(id, nom) {
+      boutiqueActuelle = { id: id, nom: nom };
+      titreBoutique.textContent = nom;
+      reinitialiserFormulaire();
+      reinitialiserVente();
+      listeProduits.innerHTML = "";
+      listeVentes.innerHTML = "";
+      blocAlerte.classList.add("cache");
+      montrer(ecranBoutique);
+
+      if (arreterEcouteProduits) arreterEcouteProduits();
+      arreterEcouteProduits = onSnapshot(
+        query(dossierProduits(), orderBy("creeLe")),
+        afficherProduits,
+        () => { messageProduit.textContent = "Impossible de charger les produits."; }
+      );
+
+      if (arreterEcouteVentes) arreterEcouteVentes();
+      arreterEcouteVentes = onSnapshot(
+        query(dossierVentes(), orderBy("creeLe", "desc"), limit(20)),
+        afficherVentes,
+        () => { messageVente.textContent = "Impossible de charger les ventes."; }
+      );
+    }
+
+    function fermerBoutique() {
+      if (arreterEcouteProduits) {
+        arreterEcouteProduits();
+        arreterEcouteProduits = null;
+      }
+      if (arreterEcouteVentes) {
+        arreterEcouteVentes();
+        arreterEcouteVentes = null;
+      }
+      boutiqueActuelle = null;
+      produitsActuels = [];
+      reinitialiserFormulaire();
+      reinitialiserVente();
+      listeProduits.innerHTML = "";
+      listeVentes.innerHTML = "";
+      champVenteProduit.innerHTML = "";
+      blocAlerte.innerHTML = "";
+      blocAlerte.classList.add("cache");
+    }
+
+    btnRetour.addEventListener("click", () => {
+      fermerBoutique();
+      montrer(ecranAccueil);
+    });
+
+    function formaterFcfa(n) {
+      return Number(n).toLocaleString("fr-FR") + " FCFA";
+    }
+
+    function remplirListeVente() {
+      const choix = champVenteProduit.value;
+      champVenteProduit.innerHTML = "";
+      if (produitsActuels.length === 0) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "Ajoute d'abord un produit";
+        champVenteProduit.appendChild(option);
+        btnVendre.disabled = true;
+        return;
+      }
+      btnVendre.disabled = false;
+      produitsActuels.forEach((p) => {
+        const option = document.createElement("option");
+        option.value = p.id;
+        option.textContent = p.nom + " (stock : " + p.stock + ")";
+        champVenteProduit.appendChild(option);
+      });
+      if (choix && produitsActuels.some((p) => p.id === choix)) {
+        champVenteProduit.value = choix;
+      }
+    }
+
+    function afficherAlerte() {
+      blocAlerte.innerHTML = "";
+      const enBas = produitsActuels.filter((p) => enAlerte(p.stock, p.stockDepart));
+      if (enBas.length === 0) {
+        blocAlerte.classList.add("cache");
+        return;
+      }
+      const titreAlerte = document.createElement("strong");
+      titreAlerte.textContent = "⚠ Stock bas : à racheter";
+      blocAlerte.appendChild(titreAlerte);
+      enBas.forEach((p) => {
+        const ligne = document.createElement("div");
+        if (p.stock === 0) {
+          ligne.textContent = p.nom + " : rupture de stock (0 sur " + p.stockDepart + ")";
+        } else {
+          ligne.textContent = p.nom + " : il reste " + p.stock + " sur " + p.stockDepart;
+        }
+        blocAlerte.appendChild(ligne);
+      });
+      blocAlerte.classList.remove("cache");
+    }
+
+    function afficherProduits(instantane) {
+      produitsActuels = instantane.docs.map((d) => ({
+        id: d.id,
+        nom: d.data().nom,
+        stock: d.data().stock,
+        stockDepart: d.data().stockDepart
+      }));
+      remplirListeVente();
+      afficherAlerte();
+
+      listeProduits.innerHTML = "";
+      if (instantane.empty) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucun produit pour le moment.";
+        listeProduits.appendChild(vide);
+        return;
+      }
+      instantane.forEach((d) => {
+        const p = d.data();
+        const li = document.createElement("li");
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const nom = document.createElement("strong");
+        nom.textContent = p.nom;
+        info.appendChild(nom);
+
+        if (enAlerte(p.stock, p.stockDepart)) {
+          const etiquette = document.createElement("span");
+          etiquette.className = "etiquette";
+          etiquette.textContent = p.stock === 0 ? "Rupture" : "Stock bas";
+          info.appendChild(etiquette);
+        }
+
+        const detail = document.createElement("small");
+        let texte = formaterFcfa(p.prix) + " · Stock : " + p.stock;
+        if (Number.isInteger(p.stockDepart) && p.stockDepart > 0) {
+          texte += " sur " + p.stockDepart;
+        }
+        detail.textContent = texte;
+        info.appendChild(detail);
+
+        if (!Number.isInteger(p.stockDepart) || p.stockDepart <= 0) {
+          const astuce = document.createElement("small");
+          astuce.className = "astuce";
+          astuce.textContent = "Stock de départ non défini (appuie sur Modifier)";
+          info.appendChild(astuce);
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const btnModifier = document.createElement("button");
+        btnModifier.className = "petit";
+        btnModifier.textContent = "Modifier";
+        btnModifier.addEventListener("click", () => {
+          produitEnModification = d.id;
+          champNomProduit.value = p.nom;
+          champPrix.value = p.prix;
+          champStock.value = p.stock;
+          champStockDepart.value = Number.isInteger(p.stockDepart) ? p.stockDepart : "";
+          titreFormulaire.textContent = "Modifier le produit";
+          btnEnregistrerProduit.textContent = "Enregistrer les changements";
+       <!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1b6ef3">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="apple-touch-icon" href="logo.png">
+  <title>Gestionnaire de boutique</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; background: #f2f4f8; color: #222; }
+    header { background: #1b6ef3; color: white; padding: 10px 16px; display: flex; align-items: center; justify-content: center; gap: 12px; }
+    header img { width: 48px; height: 48px; border-radius: 10px; flex-shrink: 0; }
+    header h1 { margin: 0; font-size: 19px; line-height: 1.2; }
+    main { padding: 16px; max-width: 420px; margin: 0 auto; }
+    .carte { background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
+    .cache { display: none; }
+    input, select { width: 100%; padding: 12px; margin: 8px 0; font-size: 16px; border: 1px solid #bbb; border-radius: 8px; background: white; color: #222; }
+    button { width: 100%; padding: 12px; margin-top: 8px; font-size: 16px; border: none; border-radius: 8px; background: #1b6ef3; color: white; }
+    button:disabled { opacity: 0.6; }
+    button.lien { background: none; color: #1b6ef3; width: auto; padding: 8px 0; margin: 0 0 8px 0; }
+    button.gris { background: #777; }
+    button.vert { background: #1e8449; }
+    button.petit { width: auto; margin: 0; padding: 8px 12px; font-size: 14px; }
+    button.danger { background: #c0392b; }
+    #message, #message-boutique, #message-produit, #message-vente { color: #c0392b; min-height: 20px; }
+    h3 { margin: 16px 0 4px 0; }
+    ul { list-style: none; padding: 0; margin: 12px 0; }
+    li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid #eee; }
+    li span, .info { font-size: 16px; word-break: break-word; }
+    .info small { display: block; color: #555; margin-top: 4px; font-size: 14px; }
+    .actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .vide { color: #777; }
+    .bloc-vente { background: #eef7f0; border-radius: 10px; padding: 12px; margin-top: 8px; }
+    .bloc-vente h3 { margin-top: 0; }
+    .alerte { background: #fdecea; border: 1px solid #e6a39b; color: #922b21; border-radius: 10px; padding: 10px 12px; margin: 12px 0; }
+    .alerte strong { display: block; margin-bottom: 4px; }
+    .alerte div { font-size: 15px; margin-top: 2px; }
+    .etiquette { display: inline-block; background: #c0392b; color: white; border-radius: 6px; font-size: 12px; padding: 2px 6px; margin-left: 6px; vertical-align: middle; }
+    .astuce { color: #888; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="logo.png" alt="Logo Alkao">
+    <h1>Gestionnaire de boutique</h1>
+  </header>
+
+  <main>
+    <div id="ecran-connexion" class="carte">
+      <h2 id="titre">Connexion</h2>
+      <input id="email" type="email" placeholder="Email" autocomplete="email">
+      <input id="mdp" type="password" placeholder="Mot de passe (6 caractères minimum)" autocomplete="current-password">
+      <button id="btn-principal">Se connecter</button>
+      <button id="btn-bascule" class="lien">Pas de compte ? Créer un compte</button>
+      <p id="message"></p>
+    </div>
+
+    <div id="ecran-accueil" class="carte cache">
+      <p id="qui"></p>
+      <h2>Mes boutiques</h2>
+      <input id="nom-boutique" type="text" placeholder="Nom de la boutique" maxlength="60">
+      <button id="btn-ajouter">Ajouter la boutique</button>
+      <p id="message-boutique"></p>
+      <ul id="liste-boutiques"></ul>
+      <button id="btn-deco" class="gris">Se déconnecter</button>
+    </div>
+
+    <div id="ecran-boutique" class="carte cache">
+      <button id="btn-retour" class="lien">← Mes boutiques</button>
+      <h2 id="titre-boutique"></h2>
+
+      <div id="alerte-stock" class="alerte cache"></div>
+
+      <div class="bloc-vente">
+        <h3>Enregistrer une vente</h3>
+        <select id="vente-produit"></select>
+        <input id="vente-quantite" type="number" inputmode="numeric" min="1" placeholder="Quantité vendue">
+        <button id="btn-vendre" class="vert">Enregistrer la vente</button>
+        <p id="message-vente"></p>
+      </div>
+
+      <h3 id="titre-formulaire">Ajouter un produit</h3>
+      <input id="nom-produit" type="text" placeholder="Nom du produit" maxlength="60">
+      <input id="prix-produit" type="number" inputmode="numeric" min="0" placeholder="Prix (FCFA)">
+      <input id="stock-produit" type="number" inputmode="numeric" min="0" placeholder="Quantité en stock">
+      <input id="stock-depart-produit" type="number" inputmode="numeric" min="0" placeholder="Stock de départ (alerte à 25 %)">
+      <button id="btn-enregistrer-produit">Ajouter le produit</button>
+      <button id="btn-annuler" class="gris cache">Annuler la modification</button>
+      <p id="message-produit"></p>
+
+      <h3>Mes produits</h3>
+      <ul id="liste-produits"></ul>
+
+      <h3>Dernières ventes</h3>
+      <ul id="liste-ventes"></ul>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      updateDoc,
+      deleteDoc,
+      getDocs,
+      writeBatch,
+      runTransaction,
+      doc,
+      onSnapshot,
+      query,
+      orderBy,
+      limit,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA5pfMUT8xnSNeRAhgR5dbGRnXx_Itn09o",
+      authDomain: "alka-shop-e10e2.firebaseapp.com",
+      projectId: "alka-shop-e10e2",
+      storageBucket: "alka-shop-e10e2.firebasestorage.app",
+      messagingSenderId: "170951024988",
+      appId: "1:170951024988:web:ff001f15fd2b0924ca6199"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const ecranConnexion = document.getElementById("ecran-connexion");
+    const ecranAccueil = document.getElementById("ecran-accueil");
+    const ecranBoutique = document.getElementById("ecran-boutique");
+    const titre = document.getElementById("titre");
+    const champEmail = document.getElementById("email");
+    const champMdp = document.getElementById("mdp");
+    const btnPrincipal = document.getElementById("btn-principal");
+    const btnBascule = document.getElementById("btn-bascule");
+    const btnDeco = document.getElementById("btn-deco");
+    const message = document.getElementById("message");
+    const qui = document.getElementById("qui");
+    const champNomBoutique = document.getElementById("nom-boutique");
+    const btnAjouter = document.getElementById("btn-ajouter");
+    const messageBoutique = document.getElementById("message-boutique");
+    const listeBoutiques = document.getElementById("liste-boutiques");
+    const btnRetour = document.getElementById("btn-retour");
+    const titreBoutique = document.getElementById("titre-boutique");
+    const titreFormulaire = document.getElementById("titre-formulaire");
+    const champNomProduit = document.getElementById("nom-produit");
+    const champPrix = document.getElementById("prix-produit");
+    const champStock = document.getElementById("stock-produit");
+    const champStockDepart = document.getElementById("stock-depart-produit");
+    const btnEnregistrerProduit = document.getElementById("btn-enregistrer-produit");
+    const btnAnnuler = document.getElementById("btn-annuler");
+    const messageProduit = document.getElementById("message-produit");
+    const listeProduits = document.getElementById("liste-produits");
+    const champVenteProduit = document.getElementById("vente-produit");
+    const champVenteQuantite = document.getElementById("vente-quantite");
+    const btnVendre = document.getElementById("btn-vendre");
+    const messageVente = document.getElementById("message-vente");
+    const listeVentes = document.getElementById("liste-ventes");
+    const blocAlerte = document.getElementById("alerte-stock");
+
+    let modeInscription = false;
+    let utilisateurActuel = null;
+    let arreterEcouteBoutiques = null;
+    let arreterEcouteProduits = null;
+    let arreterEcouteVentes = null;
+    let boutiqueActuelle = null;
+    let produitEnModification = null;
+    let produitsActuels = [];
+
+    function montrer(ecran) {
+      [ecranConnexion, ecranAccueil, ecranBoutique].forEach((e) => e.classList.add("cache"));
+      ecran.classList.remove("cache");
+    }
+
+    function erreurEnFrancais(code) {
+      const erreurs = {
+        "auth/invalid-credential": "Email ou mot de passe incorrect.",
+        "auth/invalid-email": "Cet email n'est pas valide.",
+        "auth/email-already-in-use": "Cet email a déjà un compte.",
+        "auth/weak-password": "Mot de passe trop court (6 caractères minimum).",
+        "auth/missing-password": "Écris ton mot de passe.",
+        "auth/network-request-failed": "Pas de connexion internet.",
+        "auth/too-many-requests": "Trop d'essais. Attends un moment."
+      };
+      return erreurs[code] || "Une erreur est survenue. Réessaie.";
+    }
+
+    btnBascule.addEventListener("click", () => {
+      modeInscription = !modeInscription;
+      message.textContent = "";
+      if (modeInscription) {
+        titre.textContent = "Créer un compte";
+        btnPrincipal.textContent = "Créer mon compte";
+        btnBascule.textContent = "J'ai déjà un compte";
+      } else {
+        titre.textContent = "Connexion";
+        btnPrincipal.textContent = "Se connecter";
+        btnBascule.textContent = "Pas de compte ? Créer un compte";
+      }
+    });
+
+    btnPrincipal.addEventListener("click", async () => {
+      message.textContent = "";
+      const email = champEmail.value.trim();
+      const mdp = champMdp.value;
+      try {
+        if (modeInscription) {
+          await createUserWithEmailAndPassword(auth, email, mdp);
+        } else {
+          await signInWithEmailAndPassword(auth, email, mdp);
+        }
+      } catch (e) {
+        message.textContent = erreurEnFrancais(e.code);
+      }
+    });
+
+    btnDeco.addEventListener("click", () => signOut(auth));
+
+    function dossierBoutiques() {
+      return collection(db, "users", utilisateurActuel.uid, "boutiques");
+    }
+
+    function dossierProduits() {
+      return collection(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits");
+    }
+
+    function dossierVentes() {
+      return collection(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "ventes");
+    }
+
+    // Alerte : il reste un quart (25 %) ou moins du stock de départ
+    function enAlerte(stock, stockDepart) {
+      return Number.isInteger(stockDepart) && stockDepart > 0 && stock <= stockDepart * 0.25;
+    }
+
+    btnAjouter.addEventListener("click", async () => {
+      messageBoutique.textContent = "";
+      const nom = champNomBoutique.value.trim();
+      if (nom.length === 0) {
+        messageBoutique.textContent = "Écris le nom de la boutique.";
+        return;
+      }
+      btnAjouter.disabled = true;
+      try {
+        await addDoc(dossierBoutiques(), { nom: nom, creeLe: serverTimestamp() });
+        champNomBoutique.value = "";
+      } catch (e) {
+        messageBoutique.textContent = "Impossible d'ajouter. Vérifie ta connexion.";
+      }
+      btnAjouter.disabled = false;
+    });
+
+    async function supprimerBoutique(id) {
+      for (const nomDossier of ["produits", "ventes"]) {
+        const contenu = await getDocs(collection(db, "users", utilisateurActuel.uid, "boutiques", id, nomDossier));
+        const liste = contenu.docs;
+        for (let i = 0; i < liste.length; i += 400) {
+          const lot = writeBatch(db);
+          liste.slice(i, i + 400).forEach((d) => lot.delete(d.ref));
+          await lot.commit();
+        }
+      }
+      await deleteDoc(doc(db, "users", utilisateurActuel.uid, "boutiques", id));
+    }
+
+    function afficherBoutiques(instantane) {
+      listeBoutiques.innerHTML = "";
+      if (instantane.empty) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucune boutique pour le moment.";
+        listeBoutiques.appendChild(vide);
+        return;
+      }
+      instantane.forEach((d) => {
+        const nomBoutique = d.data().nom;
+        const li = document.createElement("li");
+        const nom = document.createElement("span");
+        nom.textContent = nomBoutique;
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const btnOuvrir = document.createElement("button");
+        btnOuvrir.className = "petit";
+        btnOuvrir.textContent = "Ouvrir";
+        btnOuvrir.addEventListener("click", () => ouvrirBoutique(d.id, nomBoutique));
+
+        const btnSupprimer = document.createElement("button");
+        btnSupprimer.className = "petit danger";
+        btnSupprimer.textContent = "Supprimer";
+        btnSupprimer.addEventListener("click", async () => {
+          if (!confirm("Supprimer la boutique « " + nomBoutique + " », ses produits et ses ventes ?")) return;
+          messageBoutique.textContent = "";
+          try {
+            await supprimerBoutique(d.id);
+          } catch (e) {
+            messageBoutique.textContent = "Impossible de supprimer. Réessaie.";
+          }
+        });
+
+        actions.appendChild(btnOuvrir);
+        actions.appendChild(btnSupprimer);
+        li.appendChild(nom);
+        li.appendChild(actions);
+        listeBoutiques.appendChild(li);
+      });
+    }
+
+    function reinitialiserFormulaire() {
+      produitEnModification = null;
+      champNomProduit.value = "";
+      champPrix.value = "";
+      champStock.value = "";
+      champStockDepart.value = "";
+      titreFormulaire.textContent = "Ajouter un produit";
+      btnEnregistrerProduit.textContent = "Ajouter le produit";
+      btnAnnuler.classList.add("cache");
+      messageProduit.textContent = "";
+    }
+
+    function reinitialiserVente() {
+      champVenteQuantite.value = "";
+      messageVente.textContent = "";
+      messageVente.style.color = "";
+    }
+
+    function ouvrirBoutique(id, nom) {
+      boutiqueActuelle = { id: id, nom: nom };
+      titreBoutique.textContent = nom;
+      reinitialiserFormulaire();
+      reinitialiserVente();
+      listeProduits.innerHTML = "";
+      listeVentes.innerHTML = "";
+      blocAlerte.classList.add("cache");
+      montrer(ecranBoutique);
+
+      if (arreterEcouteProduits) arreterEcouteProduits();
+      arreterEcouteProduits = onSnapshot(
+        query(dossierProduits(), orderBy("creeLe")),
+        afficherProduits,
+        () => { messageProduit.textContent = "Impossible de charger les produits."; }
+      );
+
+      if (arreterEcouteVentes) arreterEcouteVentes();
+      arreterEcouteVentes = onSnapshot(
+        query(dossierVentes(), orderBy("creeLe", "desc"), limit(20)),
+        afficherVentes,
+        () => { messageVente.textContent = "Impossible de charger les ventes."; }
+      );
+    }
+
+    function fermerBoutique() {
+      if (arreterEcouteProduits) {
+        arreterEcouteProduits();
+        arreterEcouteProduits = null;
+      }
+      if (arreterEcouteVentes) {
+        arreterEcouteVentes();
+        arreterEcouteVentes = null;
+      }
+      boutiqueActuelle = null;
+      produitsActuels = [];
+      reinitialiserFormulaire();
+      reinitialiserVente();
+      listeProduits.innerHTML = "";
+      listeVentes.innerHTML = "";
+      champVenteProduit.innerHTML = "";
+      blocAlerte.innerHTML = "";
+      blocAlerte.classList.add("cache");
+    }
+
+    btnRetour.addEventListener("click", () => {
+      fermerBoutique();
+      montrer(ecranAccueil);
+    });
+
+    function formaterFcfa(n) {
+      return Number(n).toLocaleString("fr-FR") + " FCFA";
+    }
+
+    function remplirListeVente() {
+      const choix = champVenteProduit.value;
+      champVenteProduit.innerHTML = "";
+      if (produitsActuels.length === 0) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "Ajoute d'abord un produit";
+        champVenteProduit.appendChild(option);
+        btnVendre.disabled = true;
+        return;
+      }
+      btnVendre.disabled = false;
+      produitsActuels.forEach((p) => {
+        const option = document.createElement("option");
+        option.value = p.id;
+        option.textContent = p.nom + " (stock : " + p.stock + ")";
+        champVenteProduit.appendChild(option);
+      });
+      if (choix && produitsActuels.some((p) => p.id === choix)) {
+        champVenteProduit.value = choix;
+      }
+    }
+
+    function afficherAlerte() {
+      blocAlerte.innerHTML = "";
+      const enBas = produitsActuels.filter((p) => enAlerte(p.stock, p.stockDepart));
+      if (enBas.length === 0) {
+        blocAlerte.classList.add("cache");
+        return;
+      }
+      const titreAlerte = document.createElement("strong");
+      titreAlerte.textContent = "⚠ Stock bas : à racheter";
+      blocAlerte.appendChild(titreAlerte);
+      enBas.forEach((p) => {
+        const ligne = document.createElement("div");
+        if (p.stock === 0) {
+          ligne.textContent = p.nom + " : rupture de stock (0 sur " + p.stockDepart + ")";
+        } else {
+          ligne.textContent = p.nom + " : il reste " + p.stock + " sur " + p.stockDepart;
+        }
+        blocAlerte.appendChild(ligne);
+      });
+      blocAlerte.classList.remove("cache");
+    }
+
+    function afficherProduits(instantane) {
+      produitsActuels = instantane.docs.map((d) => ({
+        id: d.id,
+        nom: d.data().nom,
+        stock: d.data().stock,
+        stockDepart: d.data().stockDepart
+      }));
+      remplirListeVente();
+      afficherAlerte();
+
+      listeProduits.innerHTML = "";
+      if (instantane.empty) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucun produit pour le moment.";
+        listeProduits.appendChild(vide);
+        return;
+      }
+      instantane.forEach((d) => {
+        const p = d.data();
+        const li = document.createElement("li");
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const nom = document.createElement("strong");
+        nom.textContent = p.nom;
+        info.appendChild(nom);
+
+        if (enAlerte(p.stock, p.stockDepart)) {
+          const etiquette = document.createElement("span");
+          etiquette.className = "etiquette";
+          etiquette.textContent = p.stock === 0 ? "Rupture" : "Stock bas";
+          info.appendChild(etiquette);
+        }
+
+        const detail = document.createElement("small");
+        let texte = formaterFcfa(p.prix) + " · Stock : " + p.stock;
+        if (Number.isInteger(p.stockDepart) && p.stockDepart > 0) {
+          texte += " sur " + p.stockDepart;
+        }
+        detail.textContent = texte;
+        info.appendChild(detail);
+
+        if (!Number.isInteger(p.stockDepart) || p.stockDepart <= 0) {
+          const astuce = document.createElement("small");
+          astuce.className = "astuce";
+          astuce.textContent = "Stock de départ non défini (appuie sur Modifier)";
+          info.appendChild(astuce);
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const btnModifier = document.createElement("button");
+        btnModifier.className = "petit";
+        btnModifier.textContent = "Modifier";
+        btnModifier.addEventListener("click", () => {
+          produitEnModification = d.id;
+          champNomProduit.value = p.nom;
+          champPrix.value = p.prix;
+          champStock.value = p.stock;
+          champStockDepart.value = Number.isInteger(p.stockDepart) ? p.stockDepart : "";
+          titreFormulaire.textContent = "Modifier le produit";
+          btnEnregistrerProduit.textContent = "Enregistrer les changements";
+          btnAnnuler.classList.remove("cache");
+          messageProduit.textContent = "";
+          champNomProduit.focus();
+        });
+
+        const btnSupprimer = document.createElement("button");
+        btnSupprimer.className = "petit danger";
+        btnSupprimer.textContent = "Supprimer";
+        btnSupprimer.addEventListener("click", async () => {
+          if (!confirm("Supprimer le produit « " + p.nom + " » ?")) return;
+          messageProduit.textContent = "";
+          try {
+            await deleteDoc(doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", d.id));
+            if (produitEnModification === d.id) reinitialiserFormulaire();
+          } catch (e) {
+            messageProduit.textContent = "Impossible de supprimer. Réessaie.";
+          }
+        });
+
+        actions.appendChild(btnModifier);
+        actions.appendChild(btnSupprimer);
+        li.appendChild(info);
+        li.appendChild(actions);
+        listeProduits.appendChild(li);
+      });
+    }
+
+    function afficherVentes(instantane) {
+      listeVentes.innerHTML = "";
+      if (instantane.empty) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucune vente pour le moment.";
+        listeVentes.appendChild(vide);
+        return;
+      }
+      instantane.forEach((d) => {
+        const v = d.data();
+        const li = document.createElement("li");
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const titreVente = document.createElement("strong");
+        titreVente.textContent = v.quantite + " × " + v.nom;
+        const detail = document.createElement("small");
+        let quand = "à l'instant";
+        if (v.creeLe && v.creeLe.toDate) {
+          quand = v.creeLe.toDate().toLocaleString("fr-FR", {
+            day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
+          });
+        }
+        detail.textContent = formaterFcfa(v.total) + " · " + quand;
+        info.appendChild(titreVente);
+        info.appendChild(detail);
+
+        li.appendChild(info);
+        listeVentes.appendChild(li);
+      });
+    }
+
+    btnVendre.addEventListener("click", async () => {
+      messageVente.style.color = "";
+      messageVente.textContent = "";
+      const idProduit = champVenteProduit.value;
+      const quantite = Number(champVenteQuantite.value);
+
+      if (!idProduit) {
+        messageVente.textContent = "Choisis un produit.";
+        return;
+      }
+      if (champVenteQuantite.value === "" || !Number.isInteger(quantite) || quantite < 1 || quantite > 1000000) {
+        messageVente.textContent = "Quantité invalide : écris un nombre entier (1 minimum).";
+        return;
+      }
+
+      btnVendre.disabled = true;
+      try {
+        const refProduit = doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", idProduit);
+        const refVente = doc(dossierVentes());
+        const resume = await runTransaction(db, async (transaction) => {
+          const instantane = await transaction.get(refProduit);
+          if (!instantane.exists()) throw new Error("introuvable");
+          const p = instantane.data();
+          if (p.stock < quantite) throw new Error("stock:" + p.stock);
+          const total = p.prix * quantite;
+          const restant = p.stock - quantite;
+          transaction.update(refProduit, { stock: restant, modifieLe: serverTimestamp() });
+          transaction.set(refVente, {
+            produitId: idProduit,
+            nom: p.nom,
+            prix: p.prix,
+            quantite: quantite,
+            total: total,
+            creeLe: serverTimestamp()
+          });
+          return {
+            nom: p.nom,
+            total: total,
+            restant: restant,
+            bas: enAlerte(restant, p.stockDepart)
+          };
+        });
+        champVenteQuantite.value = "";
+        let texte = "Vente enregistrée : " + quantite + " × " + resume.nom + " = " + formaterFcfa(resume.total);
+        if (resume.bas) {
+          texte += resume.restant === 0
+            ? " ⚠ Rupture de stock !"
+            : " ⚠ Stock bas : il ne reste que " + resume.restant + ".";
+          messageVente.style.color = "#b9770e";
+        } else {
+          messageVente.style.color = "#1e8449";
+        }
+        messageVente.textContent = texte;
+      } catch (e) {
+        messageVente.style.color = "";
+        if (e.message && e.message.startsWith("stock:")) {
+          messageVente.textContent = "Stock insuffisant : il reste " + e.message.slice(6) + ".";
+        } else if (e.message === "introuvable") {
+          messageVente.textContent = "Ce produit n'existe plus.";
+        } else {
+          messageVente.textContent = "Impossible d'enregistrer la vente. Vérifie ta connexion.";
+        }
+      }
+      btnVendre.disabled = produitsActuels.length === 0;
+    });
+
+    btnAnnuler.addEventListener("click", reinitialiserFormulaire);
+
+    btnEnregistrerProduit.addEventListener("click", async () => {
+      messageProduit.textContent = "";
+      const nom = champNomProduit.value.trim();
+      const prix = Number(champPrix.value);
+      const stock = Number(champStock.value);
+
+      if (nom.length === 0) {
+        messageProduit.textContent = "Écris le nom du produit.";
+        return;
+      }
+      if (champPrix.value === "" || !Number.isInteger(prix) || prix < 0 || prix > 100000000) {
+        messageProduit.textContent = "Prix invalide : écris un nombre entier en FCFA.";
+        return;
+      }
+      if (champStock.value === "" || !Number.isInteger(stock) || stock < 0 || stock > 1000000) {
+        messageProduit.textContent = "Stock invalide : écris un nombre entier.";
+        return;
+      }
+
+      let stockDepart = stock;
+      if (champStockDepart.value !== "") {
+        stockDepart = Number(champStockDepart.value);
+        if (!Number.isInteger(stockDepart) || stockDepart < 0 || stockDepart > 1000000) {
+          messageProduit.textContent = "Stock de départ invalide : écris un nombre entier.";
+          return;
+        }
+      }
+      // Si on rachète de la marchandise (stock plus grand que le départ), le départ monte aussi
+      if (stock > stockDepart) stockDepart = stock;
+
+      btnEnregistrerProduit.disabled = true;
+      try {
+        if (produitEnModification) {
+          await updateDoc(
+            doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", produitEnModification),
+            { nom: nom, prix: prix, stock: stock, stockDepart: stockDepart, modifieLe: serverTimestamp() }
+          );
+        } else {
+          await addDoc(dossierProduits(), { nom: nom, prix: prix, stock: stock, stockDepart: stockDepart, creeLe: serverTimestamp() });
+        }
+        reinitialiserFormulaire();
+      } catch (e) {
+        messageProduit.textContent = "Impossible d'enregistrer. Vérifie ta connexion.";
+      }
+      btnEnregistrerProduit.disabled = false;
+    });
+
+    onAuthStateChanged(auth, (utilisateur) => {
+      if (arreterEcouteBoutiques) {
+        arreterEcouteBoutiques();
+        arreterEcouteBoutiques = null;
+      }
+      fermerBoutique();
+      utilisateurActuel = utilisateur;
+      if (utilisateur) {
+        qui.textContent = "Bienvenue !";
+        montrer(ecranAccueil);
+        const requete = query(dossierBoutiques(), orderBy("creeLe"));
+        arreterEcouteBoutiques = onSnapshot(
+          requete,
+          afficherBoutiques,
+          () => { messageBoutique.textContent = "Impossible de charger tes boutiques."; }
+        );
+      } else {
+        montrer(ecranConnexion);
+        listeBoutiques.innerHTML = "";
+        champMdp.value = "";
+      }
+    });
+  </script>
+</body>
+</html>   btnAnnuler.c<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1b6ef3">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="apple-touch-icon" href="logo.png">
+  <title>Gestionnaire de boutique</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; background: #f2f4f8; color: #222; }
+    header { background: #1b6ef3; color: white; padding: 10px 16px; display: flex; align-items: center; justify-content: center; gap: 12px; }
+    header img { width: 48px; height: 48px; border-radius: 10px; flex-shrink: 0; }
+    header h1 { margin: 0; font-size: 19px; line-height: 1.2; }
+    main { padding: 16px; max-width: 420px; margin: 0 auto; }
+    .carte { background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
+    .cache { display: none; }
+    input, select { width: 100%; padding: 12px; margin: 8px 0; font-size: 16px; border: 1px solid #bbb; border-radius: 8px; background: white; color: #222; }
+    button { width: 100%; padding: 12px; margin-top: 8px; font-size: 16px; border: none; border-radius: 8px; background: #1b6ef3; color: white; }
+    button:disabled { opacity: 0.6; }
+    button.lien { background: none; color: #1b6ef3; width: auto; padding: 8px 0; margin: 0 0 8px 0; }
+    button.gris { background: #777; }
+    button.vert { background: #1e8449; }
+    button.petit { width: auto; margin: 0; padding: 8px 12px; font-size: 14px; }
+    button.danger { background: #c0392b; }
+    #message, #message-boutique, #message-produit, #message-vente { color: #c0392b; min-height: 20px; }
+    h3 { margin: 16px 0 4px 0; }
+    ul { list-style: none; padding: 0; margin: 12px 0; }
+    li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid #eee; }
+    li span, .info { font-size: 16px; word-break: break-word; }
+    .info small { display: block; color: #555; margin-top: 4px; font-size: 14px; }
+    .actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .vide { color: #777; }
+    .bloc-vente { background: #eef7f0; border-radius: 10px; padding: 12px; margin-top: 8px; }
+    .bloc-vente h3 { margin-top: 0; }
+    .alerte { background: #fdecea; border: 1px solid #e6a39b; color: #922b21; border-radius: 10px; padding: 10px 12px; margin: 12px 0; }
+    .alerte strong { display: block; margin-bottom: 4px; }
+    .alerte div { font-size: 15px; margin-top: 2px; }
+    .etiquette { display: inline-block; background: #c0392b; color: white; border-radius: 6px; font-size: 12px; padding: 2px 6px; margin-left: 6px; vertical-align: middle; }
+    .astuce { color: #888; }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="logo.png" alt="Logo Alkao">
+    <h1>Gestionnaire de boutique</h1>
+  </header>
+
+  <main>
+    <div id="ecran-connexion" class="carte">
+      <h2 id="titre">Connexion</h2>
+      <input id="email" type="email" placeholder="Email" autocomplete="email">
+      <input id="mdp" type="password" placeholder="Mot de passe (6 caractères minimum)" autocomplete="current-password">
+      <button id="btn-principal">Se connecter</button>
+      <button id="btn-bascule" class="lien">Pas de compte ? Créer un compte</button>
+      <p id="message"></p>
+    </div>
+
+    <div id="ecran-accueil" class="carte cache">
+      <p id="qui"></p>
+      <h2>Mes boutiques</h2>
+      <input id="nom-boutique" type="text" placeholder="Nom de la boutique" maxlength="60">
+      <button id="btn-ajouter">Ajouter la boutique</button>
+      <p id="message-boutique"></p>
+      <ul id="liste-boutiques"></ul>
+      <button id="btn-deco" class="gris">Se déconnecter</button>
+    </div>
+
+    <div id="ecran-boutique" class="carte cache">
+      <button id="btn-retour" class="lien">← Mes boutiques</button>
+      <h2 id="titre-boutique"></h2>
+
+      <div id="alerte-stock" class="alerte cache"></div>
+
+      <div class="bloc-vente">
+        <h3>Enregistrer une vente</h3>
+        <select id="vente-produit"></select>
+        <input id="vente-quantite" type="number" inputmode="numeric" min="1" placeholder="Quantité vendue">
+        <button id="btn-vendre" class="vert">Enregistrer la vente</button>
+        <p id="message-vente"></p>
+      </div>
+
+      <h3 id="titre-formulaire">Ajouter un produit</h3>
+      <input id="nom-produit" type="text" placeholder="Nom du produit" maxlength="60">
+      <input id="prix-produit" type="number" inputmode="numeric" min="0" placeholder="Prix (FCFA)">
+      <input id="stock-produit" type="number" inputmode="numeric" min="0" placeholder="Quantité en stock">
+      <input id="stock-depart-produit" type="number" inputmode="numeric" min="0" placeholder="Stock de départ (alerte à 25 %)">
+      <button id="btn-enregistrer-produit">Ajouter le produit</button>
+      <button id="btn-annuler" class="gris cache">Annuler la modification</button>
+      <p id="message-produit"></p>
+
+      <h3>Mes produits</h3>
+      <ul id="liste-produits"></ul>
+
+      <h3>Dernières ventes</h3>
+      <ul id="liste-ventes"></ul>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      updateDoc,
+      deleteDoc,
+      getDocs,
+      writeBatch,
+      runTransaction,
+      doc,
+      onSnapshot,
+      query,
+      orderBy,
+      limit,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA5pfMUT8xnSNeRAhgR5dbGRnXx_Itn09o",
+      authDomain: "alka-shop-e10e2.firebaseapp.com",
+      projectId: "alka-shop-e10e2",
+      storageBucket: "alka-shop-e10e2.firebasestorage.app",
+      messagingSenderId: "170951024988",
+      appId: "1:170951024988:web:ff001f15fd2b0924ca6199"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const ecranConnexion = document.getElementById("ecran-connexion");
+    const ecranAccueil = document.getElementById("ecran-accueil");
+    const ecranBoutique = document.getElementById("ecran-boutique");
+    const titre = document.getElementById("titre");
+    const champEmail = document.getElementById("email");
+    const champMdp = document.getElementById("mdp");
+    const btnPrincipal = document.getElementById("btn-principal");
+    const btnBascule = document.getElementById("btn-bascule");
+    const btnDeco = document.getElementById("btn-deco");
+    const message = document.getElementById("message");
+    const qui = document.getElementById("qui");
+    const champNomBoutique = document.getElementById("nom-boutique");
+    const btnAjouter = document.getElementById("btn-ajouter");
+    const messageBoutique = document.getElementById("message-boutique");
+    const listeBoutiques = document.getElementById("liste-boutiques");
+    const btnRetour = document.getElementById("btn-retour");
+    const titreBoutique = document.getElementById("titre-boutique");
+    const titreFormulaire = document.getElementById("titre-formulaire");
+    const champNomProduit = document.getElementById("nom-produit");
+    const champPrix = document.getElementById("prix-produit");
+    const champStock = document.getElementById("stock-produit");
+    const champStockDepart = document.getElementById("stock-depart-produit");
+    const btnEnregistrerProduit = document.getElementById("btn-enregistrer-produit");
+    const btnAnnuler = document.getElementById("btn-annuler");
+    const messageProduit = document.getElementById("message-produit");
+    const listeProduits = document.getElementById("liste-produits");
+    const champVenteProduit = document.getElementById("vente-produit");
+    const champVenteQuantite = document.getElementById("vente-quantite");
+    const btnVendre = document.getElementById("btn-vendre");
+    const messageVente = document.getElementById("message-vente");
+    const listeVentes = document.getElementById("liste-ventes");
+    const blocAlerte = document.getElementById("alerte-stock");
+
+    let modeInscription = false;
+    let utilisateurActuel = null;
+    let arreterEcouteBoutiques = null;
+    let arreterEcouteProduits = null;
+    let arreterEcouteVentes = null;
+    let boutiqueActuelle = null;
+    let produitEnModification = null;
+    let produitsActuels = [];
+
+    function montrer(ecran) {
+      [ecranConnexion, ecranAccueil, ecranBoutique].forEach((e) => e.classList.add("cache"));
+      ecran.classList.remove("cache");
+    }
+
+    function erreurEnFrancais(code) {
+      const erreurs = {
+        "auth/invalid-credential": "Email ou mot de passe incorrect.",
+        "auth/invalid-email": "Cet email n'est pas valide.",
+        "auth/email-already-in-use": "Cet email a déjà un compte.",
+        "auth/weak-password": "Mot de passe trop court (6 caractères minimum).",
+        "auth/missing-password": "Écris ton mot de passe.",
+        "auth/network-request-failed": "Pas de connexion internet.",
+        "auth/too-many-requests": "Trop d'essais. Attends un moment."
+      };
+      return erreurs[code] || "Une erreur est survenue. Réessaie.";
+    }
+
+    btnBascule.addEventListener("click", () => {
+      modeInscription = !modeInscription;
+      message.textContent = "";
+      if (modeInscription) {
+        titre.textContent = "Créer un compte";
+        btnPrincipal.textContent = "Créer mon compte";
+        btnBascule.textContent = "J'ai déjà un compte";
+      } else {
+        titre.textContent = "Connexion";
+        btnPrincipal.textContent = "Se connecter";
+        btnBascule.textContent = "Pas de compte ? Créer un compte";
+      }
+    });
+
+    btnPrincipal.addEventListener("click", async () => {
+      message.textContent = "";
+      const email = champEmail.value.trim();
+      const mdp = champMdp.value;
+      try {
+        if (modeInscription) {
+          await createUserWithEmailAndPassword(auth, email, mdp);
+        } else {
+          await signInWithEmailAndPassword(auth, email, mdp);
+        }
+      } catch (e) {
+        message.textContent = erreurEnFrancais(e.code);
+      }
+    });
+
+    btnDeco.addEventListener("click", () => signOut(auth));
+
+    function dossierBoutiques() {
+      return collection(db, "users", utilisateurActuel.uid, "boutiques");
+    }
+
+    function dossierProduits() {
+      return collection(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits");
+    }
+
+    function dossierVentes() {
+      return collection(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "ventes");
+    }
+
+    // Alerte : il reste un quart (25 %) ou moins du stock de départ
+    function enAlerte(stock, stockDepart) {
+      return Number.isInteger(stockDepart) && stockDepart > 0 && stock <= stockDepart * 0.25;
+    }
+
+    btnAjouter.addEventListener("click", async () => {
+      messageBoutique.textContent = "";
+      const nom = champNomBoutique.value.trim();
+      if (nom.length === 0) {
+        messageBoutique.textContent = "Écris le nom de la boutique.";
+        return;
+      }
+      btnAjouter.disabled = true;
+      try {
+        await addDoc(dossierBoutiques(), { nom: nom, creeLe: serverTimestamp() });
+        champNomBoutique.value = "";
+      } catch (e) {
+        messageBoutique.textContent = "Impossible d'ajouter. Vérifie ta connexion.";
+      }
+      btnAjouter.disabled = false;
+    });
+
+    async function supprimerBoutique(id) {
+      for (const nomDossier of ["produits", "ventes"]) {
+        const contenu = await getDocs(collection(db, "users", utilisateurActuel.uid, "boutiques", id, nomDossier));
+        const liste = contenu.docs;
+        for (let i = 0; i < liste.length; i += 400) {
+          const lot = writeBatch(db);
+          liste.slice(i, i + 400).forEach((d) => lot.delete(d.ref));
+          await lot.commit();
+        }
+      }
+      await deleteDoc(doc(db, "users", utilisateurActuel.uid, "boutiques", id));
+    }
+
+    function afficherBoutiques(instantane) {
+      listeBoutiques.innerHTML = "";
+      if (instantane.empty) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucune boutique pour le moment.";
+        listeBoutiques.appendChild(vide);
+        return;
+      }
+      instantane.forEach((d) => {
+        const nomBoutique = d.data().nom;
+        const li = document.createElement("li");
+        const nom = document.createElement("span");
+        nom.textContent = nomBoutique;
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const btnOuvrir = document.createElement("button");
+        btnOuvrir.className = "petit";
+        btnOuvrir.textContent = "Ouvrir";
+        btnOuvrir.addEventListener("click", () => ouvrirBoutique(d.id, nomBoutique));
+
+        const btnSupprimer = document.createElement("button");
+        btnSupprimer.className = "petit danger";
+        btnSupprimer.textContent = "Supprimer";
+        btnSupprimer.addEventListener("click", async () => {
+          if (!confirm("Supprimer la boutique « " + nomBoutique + " », ses produits et ses ventes ?")) return;
+          messageBoutique.textContent = "";
+          try {
+            await supprimerBoutique(d.id);
+          } catch (e) {
+            messageBoutique.textContent = "Impossible de supprimer. Réessaie.";
+          }
+        });
+
+        actions.appendChild(btnOuvrir);
+        actions.appendChild(btnSupprimer);
+        li.appendChild(nom);
+        li.appendChild(actions);
+        listeBoutiques.appendChild(li);
+      });
+    }
+
+    function reinitialiserFormulaire() {
+      produitEnModification = null;
+      champNomProduit.value = "";
+      champPrix.value = "";
+      champStock.value = "";
+      champStockDepart.value = "";
+      titreFormulaire.textContent = "Ajouter un produit";
+      btnEnregistrerProduit.textContent = "Ajouter le produit";
+      btnAnnuler.classList.add("cache");
+      messageProduit.textContent = "";
+    }
+
+    function reinitialiserVente() {
+      champVenteQuantite.value = "";
+      messageVente.textContent = "";
+      messageVente.style.color = "";
+    }
+
+    function ouvrirBoutique(id, nom) {
+      boutiqueActuelle = { id: id, nom: nom };
+      titreBoutique.textContent = nom;
+      reinitialiserFormulaire();
+      reinitialiserVente();
+      listeProduits.innerHTML = "";
+      listeVentes.innerHTML = "";
+      blocAlerte.classList.add("cache");
+      montrer(ecranBoutique);
+
+      if (arreterEcouteProduits) arreterEcouteProduits();
+      arreterEcouteProduits = onSnapshot(
+        query(dossierProduits(), orderBy("creeLe")),
+        afficherProduits,
+        () => { messageProduit.textContent = "Impossible de charger les produits."; }
+      );
+
+      if (arreterEcouteVentes) arreterEcouteVentes();
+      arreterEcouteVentes = onSnapshot(
+        query(dossierVentes(), orderBy("creeLe", "desc"), limit(20)),
+        afficherVentes,
+        () => { messageVente.textContent = "Impossible de charger les ventes."; }
+      );
+    }
+
+    function fermerBoutique() {
+      if (arreterEcouteProduits) {
+        arreterEcouteProduits();
+        arreterEcouteProduits = null;
+      }
+      if (arreterEcouteVentes) {
+        arreterEcouteVentes();
+        arreterEcouteVentes = null;
+      }
+      boutiqueActuelle = null;
+      produitsActuels = [];
+      reinitialiserFormulaire();
+      reinitialiserVente();
+      listeProduits.innerHTML = "";
+      listeVentes.innerHTML = "";
+      champVenteProduit.innerHTML = "";
+      blocAlerte.innerHTML = "";
+      blocAlerte.classList.add("cache");
+    }
+
+    btnRetour.addEventListener("click", () => {
+      fermerBoutique();
+      montrer(ecranAccueil);
+    });
+
+    function formaterFcfa(n) {
+      return Number(n).toLocaleString("fr-FR") + " FCFA";
+    }
+
+    function remplirListeVente() {
+      const choix = champVenteProduit.value;
+      champVenteProduit.innerHTML = "";
+      if (produitsActuels.length === 0) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "Ajoute d'abord un produit";
+        champVenteProduit.appendChild(option);
+        btnVendre.disabled = true;
+        return;
+      }
+      btnVendre.disabled = false;
+      produitsActuels.forEach((p) => {
+        const option = document.createElement("option");
+        option.value = p.id;
+        option.textContent = p.nom + " (stock : " + p.stock + ")";
+        champVenteProduit.appendChild(option);
+      });
+      if (choix && produitsActuels.some((p) => p.id === choix)) {
+        champVenteProduit.value = choix;
+      }
+    }
+
+    function afficherAlerte() {
+      blocAlerte.innerHTML = "";
+      const enBas = produitsActuels.filter((p) => enAlerte(p.stock, p.stockDepart));
+      if (enBas.length === 0) {
+        blocAlerte.classList.add("cache");
+        return;
+      }
+      const titreAlerte = document.createElement("strong");
+      titreAlerte.textContent = "⚠ Stock bas : à racheter";
+      blocAlerte.appendChild(titreAlerte);
+      enBas.forEach((p) => {
+        const ligne = document.createElement("div");
+        if (p.stock === 0) {
+          ligne.textContent = p.nom + " : rupture de stock (0 sur " + p.stockDepart + ")";
+        } else {
+          ligne.textContent = p.nom + " : il reste " + p.stock + " sur " + p.stockDepart;
+        }
+        blocAlerte.appendChild(ligne);
+      });
+      blocAlerte.classList.remove("cache");
+    }
+
+    function afficherProduits(instantane) {
+      produitsActuels = instantane.docs.map((d) => ({
+        id: d.id,
+        nom: d.data().nom,
+        stock: d.data().stock,
+        stockDepart: d.data().stockDepart
+      }));
+      remplirListeVente();
+      afficherAlerte();
+
+      listeProduits.innerHTML = "";
+      if (instantane.empty) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucun produit pour le moment.";
+        listeProduits.appendChild(vide);
+        return;
+      }
+      instantane.forEach((d) => {
+        const p = d.data();
+        const li = document.createElement("li");
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const nom = document.createElement("strong");
+        nom.textContent = p.nom;
+        info.appendChild(nom);
+
+        if (enAlerte(p.stock, p.stockDepart)) {
+          const etiquette = document.createElement("span");
+          etiquette.className = "etiquette";
+          etiquette.textContent = p.stock === 0 ? "Rupture" : "Stock bas";
+          info.appendChild(etiquette);
+        }
+
+        const detail = document.createElement("small");
+        let texte = formaterFcfa(p.prix) + " · Stock : " + p.stock;
+        if (Number.isInteger(p.stockDepart) && p.stockDepart > 0) {
+          texte += " sur " + p.stockDepart;
+        }
+        detail.textContent = texte;
+        info.appendChild(detail);
+
+        if (!Number.isInteger(p.stockDepart) || p.stockDepart <= 0) {
+          const astuce = document.createElement("small");
+          astuce.className = "astuce";
+          astuce.textContent = "Stock de départ non défini (appuie sur Modifier)";
+          info.appendChild(astuce);
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const btnModifier = document.createElement("button");
+        btnModifier.className = "petit";
+        btnModifier.textContent = "Modifier";
+        btnModifier.addEventListener("click", () => {
+          produitEnModification = d.id;
+          champNomProduit.value = p.nom;
+          champPrix.value = p.prix;
+          champStock.value = p.stock;
+          champStockDepart.value = Number.isInteger(p.stockDepart) ? p.stockDepart : "";
+          titreFormulaire.textContent = "Modifier le produit";
+          btnEnregistrerProduit.textContent = "Enregistrer les changements";
+          btnAnnuler.classList.remove("cache");
+          messageProduit.textContent = "";
+          champNomProduit.focus();
+        });
+
+        const btnSupprimer = document.createElement("button");
+        btnSupprimer.className = "petit danger";
+        btnSupprimer.textContent = "Supprimer";
+        btnSupprimer.addEventListener("click", async () => {
+          if (!confirm("Supprimer le produit « " + p.nom + " » ?")) return;
+          messageProduit.textContent = "";
+          try {
+            await deleteDoc(doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", d.id));
+            if (produitEnModification === d.id) reinitialiserFormulaire();
+          } catch (e) {
+            messageProduit.textContent = "Impossible de supprimer. Réessaie.";
+          }
+        });
+
+        actions.appendChild(btnModifier);
+        actions.appendChild(btnSupprimer);
+        li.appendChild(info);
+        li.appendChild(actions);
+        listeProduits.appendChild(li);
+      });
+    }
+
+    function afficherVentes(instantane) {
+      listeVentes.innerHTML = "";
+      if (instantane.empty) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucune vente pour le moment.";
+        listeVentes.appendChild(vide);
+        return;
+      }
+      instantane.forEach((d) => {
+        const v = d.data();
+        const li = document.createElement("li");
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const titreVente = document.createElement("strong");
+        titreVente.textContent = v.quantite + " × " + v.nom;
+        const detail = document.createElement("small");
+        let quand = "à l'instant";
+        if (v.creeLe && v.creeLe.toDate) {
+          quand = v.creeLe.toDate().toLocaleString("fr-FR", {
+            day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
+          });
+        }
+        detail.textContent = formaterFcfa(v.total) + " · " + quand;
+        info.appendChild(titreVente);
+        info.appendChild(detail);
+
+        li.appendChild(info);
+        listeVentes.appendChild(li);
+      });
+    }
+
+    btnVendre.addEventListener("click", async () => {
+      messageVente.style.color = "";
+      messageVente.textContent = "";
+      const idProduit = champVenteProduit.value;
+      const quantite = Number(champVenteQuantite.value);
+
+      if (!idProduit) {
+        messageVente.textContent = "Choisis un produit.";
+        return;
+      }
+      if (champVenteQuantite.value === "" || !Number.isInteger(quantite) || quantite < 1 || quantite > 1000000) {
+        messageVente.textContent = "Quantité invalide : écris un nombre entier (1 minimum).";
+        return;
+      }
+
+      btnVendre.disabled = true;
+      try {
+        const refProduit = doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", idProduit);
+        const refVente = doc(dossierVentes());
+        const resume = await runTransaction(db, async (transaction) => {
+          const instantane = await transaction.get(refProduit);
+          if (!instantane.exists()) throw new Error("introuvable");
+          const p = instantane.data();
+          if (p.stock < quantite) throw new Error("stock:" + p.stock);
+          const total = p.prix * quantite;
+          const restant = p.stock - quantite;
+          transaction.update(refProduit, { stock: restant, modifieLe: serverTimestamp() });
+          transaction.set(refVente, {
+            produitId: idProduit,
+            nom: p.nom,
+            prix: p.prix,
+            quantite: quantite,
+            total: total,
+            creeLe: serverTimestamp()
+          });
+          return {
+            nom: p.nom,
+            total: total,
+            restant: restant,
+            bas: enAlerte(restant, p.stockDepart)
+          };
+        });
+        champVenteQuantite.value = "";
+        let texte = "Vente enregistrée : " + quantite + " × " + resume.nom + " = " + formaterFcfa(resume.total);
+        if (resume.bas) {
+          texte += resume.restant === 0
+            ? " ⚠ Rupture de stock !"
+            : " ⚠ Stock bas : il ne reste que " + resume.restant + ".";
+          messageVente.style.color = "#b9770e";
+        } else {
+          messageVente.style.color = "#1e8449";
+        }
+        messageVente.textContent = texte;
+      } catch (e) {
+        messageVente.style.color = "";
+        if (e.message && e.message.startsWith("stock:")) {
+          messageVente.textContent = "Stock insuffisant : il reste " + e.message.slice(6) + ".";
+        } else if (e.message === "introuvable") {
+          messageVente.textContent = "Ce produit n'existe plus.";
+        } else {
+          messageVente.textContent = "Impossible d'enregistrer la vente. Vérifie ta connexion.";
+        }
+      }
+      btnVendre.disabled = produitsActuels.length === 0;
+    });
+
+    btnAnnuler.addEventListener("click", reinitialiserFormulaire);
+
+    btnEnregistrerProduit.addEventListener("click", async () => {
+      messageProduit.textContent = "";
+      const nom = champNomProduit.value.trim();
+      const prix = Number(champPrix.value);
+      const stock = Number(champStock.value);
+
+      if (nom.length === 0) {
+        messageProduit.textContent = "Écris le nom du produit.";
+        return;
+      }
+      if (champPrix.value === "" || !Number.isInteger(prix) || prix < 0 || prix > 100000000) {
+        messageProduit.textContent = "Prix invalide : écris un nombre entier en FCFA.";
+        return;
+      }
+      if (champStock.value === "" || !Number.isInteger(stock) || stock < 0 || stock > 1000000) {
+        messageProduit.textContent = "Stock invalide : écris un nombre entier.";
+        return;
+      }
+
+      let stockDepart = stock;
+      if (champStockDepart.value !== "") {
+        stockDepart = Number(champStockDepart.value);
+        if (!Number.isInteger(stockDepart) || stockDepart < 0 || stockDepart > 1000000) {
+          messageProduit.textContent = "Stock de départ invalide : écris un nombre entier.";
+          return;
+        }
+      }
+      // Si on rachète de la marchandise (stock plus grand que le départ), le départ monte aussi
+      if (stock > stockDepart) stockDepart = stock;
+
+      btnEnregistrerProduit.disabled = true;
+      try {
+        if (produitEnModification) {
+          await updateDoc(
+            doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", produitEnModification),
+            { nom: nom, prix: prix, stock: stock, stockDepart: stockDepart, modifieLe: serverTimestamp() }
+          );
+        } else {
+          await addDoc(dossierProduits(), { nom: nom, prix: prix, stock: stock, stockDepart: stockDepart, creeLe: serverTimestamp() });
+        }
+        reinitialiserFormulaire();
+      } catch (e) {
+        messageProduit.textContent = "Impossible d'enregistrer. Vérifie ta connexion.";
+      }
+      btnEnregistrerProduit.disabled = false;
+    });
+
+    onAuthStateChanged(auth, (utilisateur) => {
+      if (arreterEcouteBoutiques) {
+        arreterEcouteBoutiques();
+        arreterEcouteBoutiques = null;
+      }
+      fermerBoutique();
+      utilisateurActuel = utilisateur;
+      if (utilisateur) {
+        qui.textContent = "Bienvenue !";
+        montrer(ecranAccueil);
+        const requete = query(dossierBoutiques(), orderBy("creeLe"));
+        arreterEcouteBoutiques = onSnapshot(
+          requete,
+          afficherBoutiques,
+          () => { messageBoutique.textContent = "Impossible de charger tes boutiques."; }
+        );
+      } else {
+        montrer(ecranConnexion);
+        listeBoutiques.innerHTML = "";
+        champMdp.value = "";
+      }
+    });
+  </script>
+</body>
+</html>lassList.remove("cache");
+          messageProduit.textContent = "";
+          champNomProduit.focus();
+        });
+
+        const btnSupprimer = document.createElement("button");
+        btnSupprimer.className = "petit danger";
+        btnSupprimer.textContent = "Supprimer";
+        btnSupprimer.addEventListener("click", async () => {
+          if (!confirm("Supprimer le produit « " + p.nom + " » ?")) return;
+          messageProduit.textContent = "";
+          try {
+            await deleteDoc(doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", d.id));
+            if (produitEnModification === d.id) reinitialiserFormulaire();
+          } catch (e) {
+            messageProduit.textContent = "Impossible de supprimer. Réessaie.";
+          }
+        });
+
+        actions.appendChild(btnModifier);
+        actions.appendChild(btnSupprimer);
+        li.appendChild(info);
+        li.appendChild(actions);
+        listeProduits.appendChild(li);
+      });
+    }
+
+    function afficherVentes(instantane) {
+      listeVentes.innerHTML = "";
+      if (instantane.empty) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucune vente pour le moment.";
+        listeVentes.appendChild(vide);
+        return;
+      }
+      instantane.forEach((d) => {
+        const v = d.data();
+        const li = document.createElement("li");
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const titreVente = document.createElement("strong");
+        titreVente.textContent = v.quantite + " × " + v.nom;
+        const detail = document.createElement("small");
+        let quand = "à l'instant";
+        if (v.creeLe && v.creeLe.toDate) {
+          quand = v.creeLe.toDate().toLocaleString("fr-FR", {
+            day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
+          });
+        }
+        detail.textContent = formaterFcfa(v.total) + " · " + quand;
+        info.appendChild(titreVente);
+        info.appendChild(detail);
+
+        li.appendChild(info);
+        listeVentes.appendChild(li);
+      });
+    }
+
+    btnVendre.addEventListener("click", async () => {
+      messageVente.style.color = "";
+      messageVente.textContent = "";
+      const idProduit = champVenteProduit.value;
+      const quantite = Number(champVenteQuantite.value);
+
+      if (!idProduit) {
+        messageVente.textContent = "Choisis un produit.";
+        return;
+      }
+      if (champVenteQuantite.value === "" || !Number.isInteger(quantite) || quantite < 1 || quantite > 1000000) {
+        messageVente.textContent = "Quantité invalide : écris un nombre entier (1 minimum).";
+        return;
+      }
+
+      btnVendre.disabled = true;
+      try {
+        const refProduit = doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", idProduit);
+        const refVente = doc(dossierVentes());
+        const resume = await runTransaction(db, async (transaction) => {
+          const instantane = await transaction.get(refProduit);
+          if (!instantane.exists()) throw new Error("introuvable");
+          const p = instantane.data();
+          if (p.stock < quantite) throw new Error("stock:" + p.stock);
+          const total = p.prix * quantite;
+          const restant = p.stock - quantite;
+          transaction.update(refProduit, { stock: restant, modifieLe: serverTimestamp() });
+          transaction.set(refVente, {
+            produitId: idProduit,
+            nom: p.nom,
+            prix: p.prix,
+            quantite: quantite,
+            total: total,
+            creeLe: serverTimestamp()
+          });
+          return {
+            nom: p.nom,
+            total: total,
+            restant: restant,
+            bas: enAlerte(restant, p.stockDepart)
+          };
+        });
+        champVenteQuantite.value = "";
+        let texte = "Vente enregistrée : " + quantite + " × " + resume.nom + " = " + formaterFcfa(resume.total);
+        if (resume.bas) {
+          texte += resume.restant === 0
+            ? " ⚠ Rupture de stock !"
+            : " ⚠ Stock bas : il ne reste que " + resume.restant + ".";
+          messageVente.style.color = "#b9770e";
+        } else {
+          messageVente.style.color = "#1e8449";
+        }
+        messageVente.textContent = texte;
+      } catch (e) {
+        messageVente.style.color = "";
+        if (e.message && e.message.startsWith("stock:")) {
+          messageVente.textContent = "Stock insuffisant : il reste " + e.message.slice(6) + ".";
+        } else if (e.message === "introuvable") {
+          messageVente.textContent = "Ce produit n'existe plus.";
+        } else {
+          messageVente.textContent = "Impossible d'enregistrer la vente. Vérifie ta connexion.";
+        }
+      }
+      btnVendre.disabled = produitsActuels.length === 0;
+    });
+
+    btnAnnuler.addEventListener("click", reinitialiserFormulaire);
+
+    btnEnregistrerProduit.addEventListener("click", async () => {
+      messageProduit.textContent = "";
+      const nom = champNomProduit.value.trim();
+      const prix = Number(champPrix.value);
+      const stock = Number(champStock.value);
+
+      if (nom.length === 0) {
+        messageProduit.textContent = "Écris le nom du produit.";
+        return;
+      }
+      if (champPrix.value === "" || !Number.isInteger(prix) || prix < 0 || prix > 100000000) {
+        messageProduit.textContent = "Prix invalide : écris un nombre entier en FCFA.";
+        return;
+      }
+      if (champStock.value === "" || !Number.isInteger(stock) || stock < 0 || stock > 1000000) {
+        messageProduit.textContent = "Stock invalide : écris un nombre entier.";
+        return;
+      }
+
+      let stockDepart = stock;
+      if (champStockDepart.value !== "") {
+        stockDepart = Number(champStockDepart.value);
+        if (!Number.isInteger(stockDepart) || stockDepart < 0 || stockDepart > 1000000) {
+          messageProduit.textContent = "Stock de départ invalide : écris un nombre entier.";
+          return;
+        }
+      }
+      // Si on rachète de la marchandise (stock plus grand que le départ), le départ monte aussi
+      if (stock > stockDepart) stockDepart = stock;
+
+      btnEnregistrerProduit.disabled = true;
+      try {
+        if (produitEnModification) {
+          await updateDoc(
+            doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", produitEnModification),
+            { nom: nom, prix: prix, stock: stock, stockDepart: stockDepart, modifieLe: serverTimestamp() }
+          );
+        } else {
+          await addDoc(dossierProduits(), { nom: nom, prix: prix, stock: stock, stockDepart: stockDepart, creeLe: serverTimestamp() });
+        }
+        reinitialiserFormulaire();
+      } catch (e) {
+        messageProduit.textContent = "Impossible d'enregistrer. Vérifie ta connexion.";
+      }
+      btnEnregistrerProduit.disabled = false;
+    });
+
+    onAuthStateChanged(auth, (utilisateur) => {
+      if (arreterEcouteBoutiques) {
+        arreterEcouteBoutiques();
+        arreterEcouteBoutiques = null;
+      }
+      fermerBoutique();
+      utilisateurActuel = utilisateur;
+      if (utilisateur) {
+        qui.textContent = "Bienvenue !";
+        montrer(ecranAccueil);
+        const requete = query(dossierBoutiques(), orderBy("creeLe"));
+        arreterEcouteBoutiques = onSnapshot(
+          requete,
+          afficherBoutiques,
+          () => { messageBoutique.textContent = "Impossible de charger tes boutiques."; }
+        );
+      } else {
+        montrer(ecranConnexion);
+        listeBoutiques.innerHTML = "";
+        champMdp.value = "";
+      }
+    });
+  </script>
+</body>
+  </html>) {
       return collection(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "ventes");
     }
 
