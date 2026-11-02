@@ -592,7 +592,7 @@
       fermerBoutique();
       utilisateurActuel = utilisateur;
       if (utilisateur) {
-        qui.textContent = "Connecté : " + utilisateur.email;
+        qui.textContent = "Bienvenue !";
         montrer(ecranAccueil);
         const requete = query(dossierBoutiques(), orderBy("creeLe"));
         arreterEcouteBoutiques = onSnapshot(
