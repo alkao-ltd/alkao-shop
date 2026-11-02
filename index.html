@@ -17,13 +17,15 @@
     main { padding: 16px; max-width: 420px; margin: 0 auto; }
     .carte { background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
     .cache { display: none; }
-    input { width: 100%; padding: 12px; margin: 8px 0; font-size: 16px; border: 1px solid #bbb; border-radius: 8px; }
+    input, select { width: 100%; padding: 12px; margin: 8px 0; font-size: 16px; border: 1px solid #bbb; border-radius: 8px; background: white; color: #222; }
     button { width: 100%; padding: 12px; margin-top: 8px; font-size: 16px; border: none; border-radius: 8px; background: #1b6ef3; color: white; }
+    button:disabled { opacity: 0.6; }
     button.lien { background: none; color: #1b6ef3; width: auto; padding: 8px 0; margin: 0 0 8px 0; }
     button.gris { background: #777; }
+    button.vert { background: #1e8449; }
     button.petit { width: auto; margin: 0; padding: 8px 12px; font-size: 14px; }
     button.danger { background: #c0392b; }
-    #message, #message-boutique, #message-produit { color: #c0392b; min-height: 20px; }
+    #message, #message-boutique, #message-produit, #message-vente { color: #c0392b; min-height: 20px; }
     h3 { margin: 16px 0 4px 0; }
     ul { list-style: none; padding: 0; margin: 12px 0; }
     li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid #eee; }
@@ -31,6 +33,8 @@
     .info small { display: block; color: #555; margin-top: 4px; font-size: 14px; }
     .actions { display: flex; gap: 6px; flex-shrink: 0; }
     .vide { color: #777; }
+    .bloc-vente { background: #eef7f0; border-radius: 10px; padding: 12px; margin-top: 8px; }
+    .bloc-vente h3 { margin-top: 0; }
   </style>
 </head>
 <body>
@@ -62,6 +66,15 @@
     <div id="ecran-boutique" class="carte cache">
       <button id="btn-retour" class="lien">← Mes boutiques</button>
       <h2 id="titre-boutique"></h2>
+
+      <div class="bloc-vente">
+        <h3>Enregistrer une vente</h3>
+        <select id="vente-produit"></select>
+        <input id="vente-quantite" type="number" inputmode="numeric" min="1" placeholder="Quantité vendue">
+        <button id="btn-vendre" class="vert">Enregistrer la vente</button>
+        <p id="message-vente"></p>
+      </div>
+
       <h3 id="titre-formulaire">Ajouter un produit</h3>
       <input id="nom-produit" type="text" placeholder="Nom du produit" maxlength="60">
       <input id="prix-produit" type="number" inputmode="numeric" min="0" placeholder="Prix (FCFA)">
@@ -69,8 +82,12 @@
       <button id="btn-enregistrer-produit">Ajouter le produit</button>
       <button id="btn-annuler" class="gris cache">Annuler la modification</button>
       <p id="message-produit"></p>
+
       <h3>Mes produits</h3>
       <ul id="liste-produits"></ul>
+
+      <h3>Dernières ventes</h3>
+      <ul id="liste-ventes"></ul>
     </div>
   </main>
 
@@ -91,10 +108,12 @@
       deleteDoc,
       getDocs,
       writeBatch,
+      runTransaction,
       doc,
       onSnapshot,
       query,
       orderBy,
+      limit,
       serverTimestamp
     } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
 
@@ -136,13 +155,20 @@
     const btnAnnuler = document.getElementById("btn-annuler");
     const messageProduit = document.getElementById("message-produit");
     const listeProduits = document.getElementById("liste-produits");
+    const champVenteProduit = document.getElementById("vente-produit");
+    const champVenteQuantite = document.getElementById("vente-quantite");
+    const btnVendre = document.getElementById("btn-vendre");
+    const messageVente = document.getElementById("message-vente");
+    const listeVentes = document.getElementById("liste-ventes");
 
     let modeInscription = false;
     let utilisateurActuel = null;
     let arreterEcouteBoutiques = null;
     let arreterEcouteProduits = null;
+    let arreterEcouteVentes = null;
     let boutiqueActuelle = null;
     let produitEnModification = null;
+    let produitsActuels = [];
 
     function montrer(ecran) {
       [ecranConnexion, ecranAccueil, ecranBoutique].forEach((e) => e.classList.add("cache"));
@@ -201,6 +227,10 @@
       return collection(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits");
     }
 
+    function dossierVentes() {
+      return collection(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "ventes");
+    }
+
     btnAjouter.addEventListener("click", async () => {
       messageBoutique.textContent = "";
       const nom = champNomBoutique.value.trim();
@@ -219,12 +249,14 @@
     });
 
     async function supprimerBoutique(id) {
-      const produits = await getDocs(collection(db, "users", utilisateurActuel.uid, "boutiques", id, "produits"));
-      const liste = produits.docs;
-      for (let i = 0; i < liste.length; i += 400) {
-        const lot = writeBatch(db);
-        liste.slice(i, i + 400).forEach((d) => lot.delete(d.ref));
-        await lot.commit();
+      for (const nomDossier of ["produits", "ventes"]) {
+        const contenu = await getDocs(collection(db, "users", utilisateurActuel.uid, "boutiques", id, nomDossier));
+        const liste = contenu.docs;
+        for (let i = 0; i < liste.length; i += 400) {
+          const lot = writeBatch(db);
+          liste.slice(i, i + 400).forEach((d) => lot.delete(d.ref));
+          await lot.commit();
+        }
       }
       await deleteDoc(doc(db, "users", utilisateurActuel.uid, "boutiques", id));
     }
@@ -256,7 +288,7 @@
         btnSupprimer.className = "petit danger";
         btnSupprimer.textContent = "Supprimer";
         btnSupprimer.addEventListener("click", async () => {
-          if (!confirm("Supprimer la boutique « " + nomBoutique + " » et tous ses produits ?")) return;
+          if (!confirm("Supprimer la boutique « " + nomBoutique + " », ses produits et ses ventes ?")) return;
           messageBoutique.textContent = "";
           try {
             await supprimerBoutique(d.id);
@@ -284,18 +316,33 @@
       messageProduit.textContent = "";
     }
 
+    function reinitialiserVente() {
+      champVenteQuantite.value = "";
+      messageVente.textContent = "";
+      messageVente.style.color = "";
+    }
+
     function ouvrirBoutique(id, nom) {
       boutiqueActuelle = { id: id, nom: nom };
       titreBoutique.textContent = nom;
       reinitialiserFormulaire();
+      reinitialiserVente();
       listeProduits.innerHTML = "";
+      listeVentes.innerHTML = "";
       montrer(ecranBoutique);
+
       if (arreterEcouteProduits) arreterEcouteProduits();
-      const requete = query(dossierProduits(), orderBy("creeLe"));
       arreterEcouteProduits = onSnapshot(
-        requete,
+        query(dossierProduits(), orderBy("creeLe")),
         afficherProduits,
         () => { messageProduit.textContent = "Impossible de charger les produits."; }
+      );
+
+      if (arreterEcouteVentes) arreterEcouteVentes();
+      arreterEcouteVentes = onSnapshot(
+        query(dossierVentes(), orderBy("creeLe", "desc"), limit(20)),
+        afficherVentes,
+        () => { messageVente.textContent = "Impossible de charger les ventes."; }
       );
     }
 
@@ -304,9 +351,17 @@
         arreterEcouteProduits();
         arreterEcouteProduits = null;
       }
+      if (arreterEcouteVentes) {
+        arreterEcouteVentes();
+        arreterEcouteVentes = null;
+      }
       boutiqueActuelle = null;
+      produitsActuels = [];
       reinitialiserFormulaire();
+      reinitialiserVente();
       listeProduits.innerHTML = "";
+      listeVentes.innerHTML = "";
+      champVenteProduit.innerHTML = "";
     }
 
     btnRetour.addEventListener("click", () => {
@@ -318,7 +373,33 @@
       return Number(n).toLocaleString("fr-FR") + " FCFA";
     }
 
+    function remplirListeVente() {
+      const choix = champVenteProduit.value;
+      champVenteProduit.innerHTML = "";
+      if (produitsActuels.length === 0) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "Ajoute d'abord un produit";
+        champVenteProduit.appendChild(option);
+        btnVendre.disabled = true;
+        return;
+      }
+      btnVendre.disabled = false;
+      produitsActuels.forEach((p) => {
+        const option = document.createElement("option");
+        option.value = p.id;
+        option.textContent = p.nom + " (stock : " + p.stock + ")";
+        champVenteProduit.appendChild(option);
+      });
+      if (choix && produitsActuels.some((p) => p.id === choix)) {
+        champVenteProduit.value = choix;
+      }
+    }
+
     function afficherProduits(instantane) {
+      produitsActuels = instantane.docs.map((d) => ({ id: d.id, nom: d.data().nom, stock: d.data().stock }));
+      remplirListeVente();
+
       listeProduits.innerHTML = "";
       if (instantane.empty) {
         const vide = document.createElement("li");
@@ -379,6 +460,91 @@
         listeProduits.appendChild(li);
       });
     }
+
+    function afficherVentes(instantane) {
+      listeVentes.innerHTML = "";
+      if (instantane.empty) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucune vente pour le moment.";
+        listeVentes.appendChild(vide);
+        return;
+      }
+      instantane.forEach((d) => {
+        const v = d.data();
+        const li = document.createElement("li");
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const titreVente = document.createElement("strong");
+        titreVente.textContent = v.quantite + " × " + v.nom;
+        const detail = document.createElement("small");
+        let quand = "à l'instant";
+        if (v.creeLe && v.creeLe.toDate) {
+          quand = v.creeLe.toDate().toLocaleString("fr-FR", {
+            day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
+          });
+        }
+        detail.textContent = formaterFcfa(v.total) + " · " + quand;
+        info.appendChild(titreVente);
+        info.appendChild(detail);
+
+        li.appendChild(info);
+        listeVentes.appendChild(li);
+      });
+    }
+
+    btnVendre.addEventListener("click", async () => {
+      messageVente.style.color = "";
+      messageVente.textContent = "";
+      const idProduit = champVenteProduit.value;
+      const quantite = Number(champVenteQuantite.value);
+
+      if (!idProduit) {
+        messageVente.textContent = "Choisis un produit.";
+        return;
+      }
+      if (champVenteQuantite.value === "" || !Number.isInteger(quantite) || quantite < 1 || quantite > 1000000) {
+        messageVente.textContent = "Quantité invalide : écris un nombre entier (1 minimum).";
+        return;
+      }
+
+      btnVendre.disabled = true;
+      try {
+        const refProduit = doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", idProduit);
+        const refVente = doc(dossierVentes());
+        const resume = await runTransaction(db, async (transaction) => {
+          const instantane = await transaction.get(refProduit);
+          if (!instantane.exists()) throw new Error("introuvable");
+          const p = instantane.data();
+          if (p.stock < quantite) throw new Error("stock:" + p.stock);
+          const total = p.prix * quantite;
+          transaction.update(refProduit, { stock: p.stock - quantite, modifieLe: serverTimestamp() });
+          transaction.set(refVente, {
+            produitId: idProduit,
+            nom: p.nom,
+            prix: p.prix,
+            quantite: quantite,
+            total: total,
+            creeLe: serverTimestamp()
+          });
+          return { nom: p.nom, total: total };
+        });
+        champVenteQuantite.value = "";
+        messageVente.style.color = "#1e8449";
+        messageVente.textContent = "Vente enregistrée : " + quantite + " × " + resume.nom + " = " + formaterFcfa(resume.total);
+      } catch (e) {
+        messageVente.style.color = "";
+        if (e.message && e.message.startsWith("stock:")) {
+          messageVente.textContent = "Stock insuffisant : il reste " + e.message.slice(6) + ".";
+        } else if (e.message === "introuvable") {
+          messageVente.textContent = "Ce produit n'existe plus.";
+        } else {
+          messageVente.textContent = "Impossible d'enregistrer la vente. Vérifie ta connexion.";
+        }
+      }
+      btnVendre.disabled = produitsActuels.length === 0;
+    });
 
     btnAnnuler.addEventListener("click", reinitialiserFormulaire);
 
