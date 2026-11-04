@@ -40,6 +40,10 @@
     .alerte div { font-size: 15px; margin-top: 2px; }
     .etiquette { display: inline-block; background: #c0392b; color: white; border-radius: 6px; font-size: 12px; padding: 2px 6px; margin-left: 6px; vertical-align: middle; }
     .astuce { color: #888; }
+    #aide-stock { margin: 0 0 8px 0; font-size: 14px; }
+    .resume { background: #fff8e1; border: 1px solid #f0d78c; border-radius: 10px; padding: 12px; margin-top: 16px; }
+    .resume h3 { margin-top: 0; }
+    .resume div { font-size: 17px; margin: 6px 0; }
   </style>
 </head>
 <body>
@@ -86,7 +90,7 @@
       <input id="nom-produit" type="text" placeholder="Nom du produit" maxlength="60">
       <input id="prix-produit" type="number" inputmode="numeric" min="0" placeholder="Prix (FCFA)">
       <input id="stock-produit" type="number" inputmode="numeric" min="0" placeholder="Quantité en stock">
-      <input id="stock-depart-produit" type="number" inputmode="numeric" min="0" placeholder="Stock de départ (alerte à 25 %)">
+      <p id="aide-stock" class="astuce cache"></p>
       <button id="btn-enregistrer-produit">Ajouter le produit</button>
       <button id="btn-annuler" class="gris cache">Annuler la modification</button>
       <p id="message-produit"></p>
@@ -96,6 +100,13 @@
 
       <h3>Dernières ventes</h3>
       <ul id="liste-ventes"></ul>
+
+      <div class="resume">
+        <h3>Résumé des ventes</h3>
+        <div id="resume-nb">Nombre de ventes : …</div>
+        <div id="resume-total">Argent encaissé : …</div>
+        <button id="btn-reinit-resume" class="gris">Remettre le résumé à zéro</button>
+      </div>
     </div>
   </main>
 
@@ -159,7 +170,7 @@
     const champNomProduit = document.getElementById("nom-produit");
     const champPrix = document.getElementById("prix-produit");
     const champStock = document.getElementById("stock-produit");
-    const champStockDepart = document.getElementById("stock-depart-produit");
+    const aideStock = document.getElementById("aide-stock");
     const btnEnregistrerProduit = document.getElementById("btn-enregistrer-produit");
     const btnAnnuler = document.getElementById("btn-annuler");
     const messageProduit = document.getElementById("message-produit");
@@ -170,12 +181,17 @@
     const messageVente = document.getElementById("message-vente");
     const listeVentes = document.getElementById("liste-ventes");
     const blocAlerte = document.getElementById("alerte-stock");
+    const resumeNb = document.getElementById("resume-nb");
+    const resumeTotal = document.getElementById("resume-total");
+    const btnReinitResume = document.getElementById("btn-reinit-resume");
 
     let modeInscription = false;
     let utilisateurActuel = null;
     let arreterEcouteBoutiques = null;
     let arreterEcouteProduits = null;
     let arreterEcouteVentes = null;
+    let arreterEcouteResume = null;
+    let resumeCalcule = false;
     let boutiqueActuelle = null;
     let produitEnModification = null;
     let produitsActuels = [];
@@ -233,6 +249,10 @@
       return collection(db, "users", utilisateurActuel.uid, "boutiques");
     }
 
+    function refBoutiqueActuelle() {
+      return doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id);
+    }
+
     function dossierProduits() {
       return collection(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits");
     }
@@ -241,9 +261,22 @@
       return collection(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "ventes");
     }
 
-    // Alerte : il reste un quart (25 %) ou moins du stock de départ
+    // Alerte : il reste un quart (25 %) ou moins du total reçu
     function enAlerte(stock, stockDepart) {
       return Number.isInteger(stockDepart) && stockDepart > 0 && stock <= stockDepart * 0.25;
+    }
+
+    // Addition d'une liste de nombres
+    function somme(liste) {
+      return liste.reduce((a, b) => a + b, 0);
+    }
+
+    // Liste des entrées de stock d'un produit (ex. [50, 20]).
+    // Pour un ancien produit sans liste, on part du stock de départ.
+    function entreesDe(p) {
+      if (Array.isArray(p.entrees) && p.entrees.length > 0) return p.entrees;
+      if (Number.isInteger(p.stockDepart) && p.stockDepart > 0) return [p.stockDepart];
+      return p.stock > 0 ? [p.stock] : [];
     }
 
     btnAjouter.addEventListener("click", async () => {
@@ -325,7 +358,9 @@
       champNomProduit.value = "";
       champPrix.value = "";
       champStock.value = "";
-      champStockDepart.value = "";
+      champStock.placeholder = "Quantité en stock";
+      aideStock.textContent = "";
+      aideStock.classList.add("cache");
       titreFormulaire.textContent = "Ajouter un produit";
       btnEnregistrerProduit.textContent = "Ajouter le produit";
       btnAnnuler.classList.add("cache");
@@ -338,11 +373,52 @@
       messageVente.style.color = "";
     }
 
+    function reinitialiserAffichageResume() {
+      resumeNb.textContent = "Nombre de ventes : …";
+      resumeTotal.textContent = "Argent encaissé : …";
+    }
+
+    // Affiche le résumé cumulé de la boutique
+    function afficherResume(instantane) {
+      if (!instantane.exists()) return;
+      const b = instantane.data();
+      const aCompteurs = Number.isInteger(b.nbVentes) && typeof b.totalVentes === "number";
+      if (!aCompteurs) {
+        // Première ouverture avec ce résumé : on compte les ventes déjà faites
+        if (!resumeCalcule) {
+          resumeCalcule = true;
+          calculerResumeDepuisVentes();
+        }
+        return;
+      }
+      resumeNb.textContent = "Nombre de ventes : " + b.nbVentes;
+      resumeTotal.textContent = "Argent encaissé : " + formaterFcfa(b.totalVentes);
+    }
+
+    async function calculerResumeDepuisVentes() {
+      try {
+        const refB = refBoutiqueActuelle();
+        const contenu = await getDocs(dossierVentes());
+        let nb = 0;
+        let total = 0;
+        contenu.forEach((d) => {
+          nb += 1;
+          total += Number(d.data().total) || 0;
+        });
+        await updateDoc(refB, { nbVentes: nb, totalVentes: total });
+      } catch (e) {
+        resumeNb.textContent = "Impossible de calculer le résumé. Vérifie ta connexion.";
+        resumeTotal.textContent = "";
+        resumeCalcule = false;
+      }
+    }
+
     function ouvrirBoutique(id, nom) {
       boutiqueActuelle = { id: id, nom: nom };
       titreBoutique.textContent = nom;
       reinitialiserFormulaire();
       reinitialiserVente();
+      reinitialiserAffichageResume();
       listeProduits.innerHTML = "";
       listeVentes.innerHTML = "";
       blocAlerte.classList.add("cache");
@@ -361,6 +437,17 @@
         afficherVentes,
         () => { messageVente.textContent = "Impossible de charger les ventes."; }
       );
+
+      if (arreterEcouteResume) arreterEcouteResume();
+      resumeCalcule = false;
+      arreterEcouteResume = onSnapshot(
+        refBoutiqueActuelle(),
+        afficherResume,
+        () => {
+          resumeNb.textContent = "Impossible de charger le résumé.";
+          resumeTotal.textContent = "";
+        }
+      );
     }
 
     function fermerBoutique() {
@@ -372,10 +459,15 @@
         arreterEcouteVentes();
         arreterEcouteVentes = null;
       }
+      if (arreterEcouteResume) {
+        arreterEcouteResume();
+        arreterEcouteResume = null;
+      }
       boutiqueActuelle = null;
       produitsActuels = [];
       reinitialiserFormulaire();
       reinitialiserVente();
+      reinitialiserAffichageResume();
       listeProduits.innerHTML = "";
       listeVentes.innerHTML = "";
       champVenteProduit.innerHTML = "";
@@ -438,12 +530,18 @@
     }
 
     function afficherProduits(instantane) {
-      produitsActuels = instantane.docs.map((d) => ({
-        id: d.id,
-        nom: d.data().nom,
-        stock: d.data().stock,
-        stockDepart: d.data().stockDepart
-      }));
+      produitsActuels = instantane.docs.map((d) => {
+        const data = d.data();
+        const entrees = entreesDe(data);
+        return {
+          id: d.id,
+          nom: data.nom,
+          prix: data.prix,
+          stock: data.stock,
+          entrees: entrees,
+          stockDepart: somme(entrees)
+        };
+      });
       remplirListeVente();
       afficherAlerte();
 
@@ -457,6 +555,8 @@
       }
       instantane.forEach((d) => {
         const p = d.data();
+        const entrees = entreesDe(p);
+        const totalRecu = somme(entrees);
         const li = document.createElement("li");
 
         const info = document.createElement("div");
@@ -465,7 +565,7 @@
         nom.textContent = p.nom;
         info.appendChild(nom);
 
-        if (enAlerte(p.stock, p.stockDepart)) {
+        if (enAlerte(p.stock, totalRecu)) {
           const etiquette = document.createElement("span");
           etiquette.className = "etiquette";
           etiquette.textContent = p.stock === 0 ? "Rupture" : "Stock bas";
@@ -473,18 +573,15 @@
         }
 
         const detail = document.createElement("small");
-        let texte = formaterFcfa(p.prix) + " · Stock : " + p.stock;
-        if (Number.isInteger(p.stockDepart) && p.stockDepart > 0) {
-          texte += " sur " + p.stockDepart;
-        }
-        detail.textContent = texte;
+        detail.textContent = formaterFcfa(p.prix) + " · Stock : " + p.stock;
         info.appendChild(detail);
 
-        if (!Number.isInteger(p.stockDepart) || p.stockDepart <= 0) {
-          const astuce = document.createElement("small");
-          astuce.className = "astuce";
-          astuce.textContent = "Stock de départ non défini (appuie sur Modifier)";
-          info.appendChild(astuce);
+        if (entrees.length > 0) {
+          const ligneEntrees = document.createElement("small");
+          ligneEntrees.textContent = entrees.length > 1
+            ? "Entrées : " + entrees.join(" + ") + " = " + totalRecu
+            : "Entrées : " + totalRecu;
+          info.appendChild(ligneEntrees);
         }
 
         const actions = document.createElement("div");
@@ -497,8 +594,10 @@
           produitEnModification = d.id;
           champNomProduit.value = p.nom;
           champPrix.value = p.prix;
-          champStock.value = p.stock;
-          champStockDepart.value = Number.isInteger(p.stockDepart) ? p.stockDepart : "";
+          champStock.value = "";
+          champStock.placeholder = "Quantité à ajouter (+)";
+          aideStock.textContent = "Stock actuel : " + p.stock + ". Écris la quantité à ajouter (laisse vide pour ne rien ajouter).";
+          aideStock.classList.remove("cache");
           titreFormulaire.textContent = "Modifier le produit";
           btnEnregistrerProduit.textContent = "Enregistrer les changements";
           btnAnnuler.classList.remove("cache");
@@ -579,12 +678,16 @@
       btnVendre.disabled = true;
       try {
         const refProduit = doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", idProduit);
+        const refB = refBoutiqueActuelle();
         const refVente = doc(dossierVentes());
         const resume = await runTransaction(db, async (transaction) => {
           const instantane = await transaction.get(refProduit);
+          const instantaneBoutique = await transaction.get(refB);
           if (!instantane.exists()) throw new Error("introuvable");
           const p = instantane.data();
           if (p.stock < quantite) throw new Error("stock:" + p.stock);
+          const b = instantaneBoutique.exists() ? instantaneBoutique.data() : {};
+          const aCompteurs = Number.isInteger(b.nbVentes) && typeof b.totalVentes === "number";
           const total = p.prix * quantite;
           const restant = p.stock - quantite;
           transaction.update(refProduit, { stock: restant, modifieLe: serverTimestamp() });
@@ -596,11 +699,17 @@
             total: total,
             creeLe: serverTimestamp()
           });
+          if (aCompteurs) {
+            transaction.update(refB, {
+              nbVentes: b.nbVentes + 1,
+              totalVentes: b.totalVentes + total
+            });
+          }
           return {
             nom: p.nom,
             total: total,
             restant: restant,
-            bas: enAlerte(restant, p.stockDepart)
+            bas: enAlerte(restant, somme(entreesDe(p)))
           };
         });
         champVenteQuantite.value = "";
@@ -627,13 +736,27 @@
       btnVendre.disabled = produitsActuels.length === 0;
     });
 
+    btnReinitResume.addEventListener("click", async () => {
+      if (!confirm("Remettre le résumé des ventes à zéro ? Le stock et la liste des dernières ventes ne changent pas.")) return;
+      messageVente.style.color = "";
+      messageVente.textContent = "";
+      try {
+        await updateDoc(refBoutiqueActuelle(), {
+          nbVentes: 0,
+          totalVentes: 0,
+          resumeRemisLe: serverTimestamp()
+        });
+      } catch (e) {
+        messageVente.textContent = "Impossible de remettre à zéro. Vérifie ta connexion.";
+      }
+    });
+
     btnAnnuler.addEventListener("click", reinitialiserFormulaire);
 
     btnEnregistrerProduit.addEventListener("click", async () => {
       messageProduit.textContent = "";
       const nom = champNomProduit.value.trim();
       const prix = Number(champPrix.value);
-      const stock = Number(champStock.value);
 
       if (nom.length === 0) {
         messageProduit.textContent = "Écris le nom du produit.";
@@ -643,32 +766,57 @@
         messageProduit.textContent = "Prix invalide : écris un nombre entier en FCFA.";
         return;
       }
+
+      if (produitEnModification) {
+        // Modification : la quantité écrite est AJOUTÉE au stock
+        const actuel = produitsActuels.find((x) => x.id === produitEnModification);
+        if (!actuel) {
+          messageProduit.textContent = "Ce produit n'existe plus.";
+          return;
+        }
+        const ajout = champStock.value === "" ? 0 : Number(champStock.value);
+        if (!Number.isInteger(ajout) || ajout < 0 || ajout > 1000000) {
+          messageProduit.textContent = "Quantité invalide : écris un nombre entier à ajouter.";
+          return;
+        }
+        const nouvellesEntrees = ajout > 0 ? actuel.entrees.concat([ajout]) : actuel.entrees;
+        btnEnregistrerProduit.disabled = true;
+        try {
+          await updateDoc(
+            doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", produitEnModification),
+            {
+              nom: nom,
+              prix: prix,
+              stock: actuel.stock + ajout,
+              stockDepart: somme(nouvellesEntrees),
+              entrees: nouvellesEntrees,
+              modifieLe: serverTimestamp()
+            }
+          );
+          reinitialiserFormulaire();
+        } catch (e) {
+          messageProduit.textContent = "Impossible d'enregistrer. Vérifie ta connexion.";
+        }
+        btnEnregistrerProduit.disabled = false;
+        return;
+      }
+
+      // Nouveau produit : la quantité écrite est la première entrée
+      const stock = Number(champStock.value);
       if (champStock.value === "" || !Number.isInteger(stock) || stock < 0 || stock > 1000000) {
         messageProduit.textContent = "Stock invalide : écris un nombre entier.";
         return;
       }
-
-      let stockDepart = stock;
-      if (champStockDepart.value !== "") {
-        stockDepart = Number(champStockDepart.value);
-        if (!Number.isInteger(stockDepart) || stockDepart < 0 || stockDepart > 1000000) {
-          messageProduit.textContent = "Stock de départ invalide : écris un nombre entier.";
-          return;
-        }
-      }
-      // Si on rachète de la marchandise (stock plus grand que le départ), le départ monte aussi
-      if (stock > stockDepart) stockDepart = stock;
-
       btnEnregistrerProduit.disabled = true;
       try {
-        if (produitEnModification) {
-          await updateDoc(
-            doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", produitEnModification),
-            { nom: nom, prix: prix, stock: stock, stockDepart: stockDepart, modifieLe: serverTimestamp() }
-          );
-        } else {
-          await addDoc(dossierProduits(), { nom: nom, prix: prix, stock: stock, stockDepart: stockDepart, creeLe: serverTimestamp() });
-        }
+        await addDoc(dossierProduits(), {
+          nom: nom,
+          prix: prix,
+          stock: stock,
+          stockDepart: stock,
+          entrees: stock > 0 ? [stock] : [],
+          creeLe: serverTimestamp()
+        });
         reinitialiserFormulaire();
       } catch (e) {
         messageProduit.textContent = "Impossible d'enregistrer. Vérifie ta connexion.";
@@ -697,9 +845,11 @@
         listeBoutiques.innerHTML = "";
         champMdp.value = "";
       }
-    });if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./sw.js");
+    });
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js");
     }
   </script>
 </body>
-  </html>
+        </html>
