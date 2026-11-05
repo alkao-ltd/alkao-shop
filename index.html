@@ -46,6 +46,8 @@
     .resume { background: #fff8e1; border: 1px solid #f0d78c; border-radius: 10px; padding: 12px; margin-top: 16px; }
     .resume h3 { margin-top: 0; }
     .resume div { font-size: 17px; margin: 6px 0; }
+    #resume-produits { margin-top: 10px; padding-top: 8px; border-top: 1px solid #f0d78c; }
+    #resume-produits div { font-size: 15px; margin: 4px 0; }
   </style>
 </head>
 <body>
@@ -112,6 +114,7 @@
         <h3>Résumé des ventes</h3>
         <div id="resume-nb">Nombre de ventes : …</div>
         <div id="resume-total">Argent encaissé : …</div>
+        <div id="resume-produits"></div>
         <button id="btn-reinit-resume" class="danger">Tout remettre à zéro (ventes et résumé)</button>
       </div>
     </div>
@@ -142,7 +145,6 @@
       onSnapshot,
       query,
       orderBy,
-      limit,
       serverTimestamp
     } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
 
@@ -206,6 +208,7 @@
     const blocAlerte = document.getElementById("alerte-stock");
     const resumeNb = document.getElementById("resume-nb");
     const resumeTotal = document.getElementById("resume-total");
+    const resumeProduits = document.getElementById("resume-produits");
     const btnReinitResume = document.getElementById("btn-reinit-resume");
 
     let modeInscription = false;
@@ -220,6 +223,7 @@
     let produitEnModification = null;
     let produitsActuels = [];
     let instantaneProduits = null;
+    let ventesActuelles = [];
 
     // Bandeau « Hors connexion »
     function majConnexion() {
@@ -416,6 +420,7 @@
     function reinitialiserAffichageResume() {
       resumeNb.textContent = "Nombre de ventes : …";
       resumeTotal.textContent = "Argent encaissé : …";
+      resumeProduits.innerHTML = "";
     }
 
     // Affiche le résumé cumulé de la boutique
@@ -462,6 +467,7 @@
       reinitialiserAffichageResume();
       champRecherche.value = "";
       instantaneProduits = null;
+      ventesActuelles = [];
       listeProduits.innerHTML = "";
       listeVentes.innerHTML = "";
       blocAlerte.classList.add("cache");
@@ -474,9 +480,10 @@
         () => { messageProduit.textContent = "Impossible de charger les produits."; }
       );
 
+      // Toutes les ventes de la boutique (les plus récentes d'abord)
       if (arreterEcouteVentes) arreterEcouteVentes();
       arreterEcouteVentes = onSnapshot(
-        query(dossierVentes(), orderBy("creeLe", "desc"), limit(20)),
+        query(dossierVentes(), orderBy("creeLe", "desc")),
         afficherVentes,
         () => { messageVente.textContent = "Impossible de charger les ventes."; }
       );
@@ -511,6 +518,7 @@
       boutiqueActuelle = null;
       produitsActuels = [];
       instantaneProduits = null;
+      ventesActuelles = [];
       champRecherche.value = "";
       reinitialiserFormulaire();
       reinitialiserVente();
@@ -693,17 +701,24 @@
     // La liste se met à jour pendant qu'on écrit dans la case de recherche
     champRecherche.addEventListener("input", dessinerListeProduits);
 
+    // Reçoit toutes les ventes, puis dessine la liste et le résumé par produit
     function afficherVentes(instantane) {
+      ventesActuelles = instantane.docs.map((d) => d.data());
+      dessinerListeVentes();
+      dessinerResumeProduits();
+    }
+
+    // Les 20 dernières ventes
+    function dessinerListeVentes() {
       listeVentes.innerHTML = "";
-      if (instantane.empty) {
+      if (ventesActuelles.length === 0) {
         const vide = document.createElement("li");
         vide.className = "vide";
         vide.textContent = "Aucune vente pour le moment.";
         listeVentes.appendChild(vide);
         return;
       }
-      instantane.forEach((d) => {
-        const v = d.data();
+      ventesActuelles.slice(0, 20).forEach((v) => {
         const li = document.createElement("li");
 
         const info = document.createElement("div");
@@ -724,6 +739,29 @@
         li.appendChild(info);
         listeVentes.appendChild(li);
       });
+    }
+
+    // Résumé par produit : nombre vendu et argent encaissé pour chaque produit
+    function dessinerResumeProduits() {
+      resumeProduits.innerHTML = "";
+      if (ventesActuelles.length === 0) return;
+      const groupes = {};
+      ventesActuelles.forEach((v) => {
+        const cle = v.produitId || v.nom;
+        if (!groupes[cle]) groupes[cle] = { nom: v.nom, quantite: 0, total: 0 };
+        groupes[cle].quantite += Number(v.quantite) || 0;
+        groupes[cle].total += Number(v.total) || 0;
+      });
+      const titreProduits = document.createElement("strong");
+      titreProduits.textContent = "Par produit :";
+      resumeProduits.appendChild(titreProduits);
+      Object.values(groupes)
+        .sort((a, b) => b.total - a.total)
+        .forEach((g) => {
+          const ligne = document.createElement("div");
+          ligne.textContent = g.nom + " : " + g.quantite + (g.quantite > 1 ? " vendus, " : " vendu, ") + formaterFcfa(g.total);
+          resumeProduits.appendChild(ligne);
+        });
     }
 
     // Quantité vendue : un nombre, ou plusieurs nombres séparés par + (ex. 3+15)
