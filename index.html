@@ -102,6 +102,7 @@
       <p id="message-produit"></p>
 
       <h3>Mes produits</h3>
+      <input id="recherche-produit" type="search" autocomplete="off" placeholder="Rechercher un produit">
       <ul id="liste-produits"></ul>
 
       <h3>Dernières ventes</h3>
@@ -193,6 +194,7 @@
     const btnEnregistrerProduit = document.getElementById("btn-enregistrer-produit");
     const btnAnnuler = document.getElementById("btn-annuler");
     const messageProduit = document.getElementById("message-produit");
+    const champRecherche = document.getElementById("recherche-produit");
     const listeProduits = document.getElementById("liste-produits");
     const champVenteProduit = document.getElementById("vente-produit");
     const champVenteQuantite = document.getElementById("vente-quantite");
@@ -217,6 +219,7 @@
     let boutiqueActuelle = null;
     let produitEnModification = null;
     let produitsActuels = [];
+    let instantaneProduits = null;
 
     // Bandeau « Hors connexion »
     function majConnexion() {
@@ -299,6 +302,11 @@
     // Addition d'une liste de nombres
     function somme(liste) {
       return liste.reduce((a, b) => a + b, 0);
+    }
+
+    // Texte en minuscules et sans accents (pour la recherche)
+    function simplifier(texte) {
+      return String(texte || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     }
 
     // Liste des entrées de stock d'un produit (ex. [50, 20]).
@@ -452,6 +460,8 @@
       reinitialiserFormulaire();
       reinitialiserVente();
       reinitialiserAffichageResume();
+      champRecherche.value = "";
+      instantaneProduits = null;
       listeProduits.innerHTML = "";
       listeVentes.innerHTML = "";
       blocAlerte.classList.add("cache");
@@ -500,6 +510,8 @@
       resumeActif = false;
       boutiqueActuelle = null;
       produitsActuels = [];
+      instantaneProduits = null;
+      champRecherche.value = "";
       reinitialiserFormulaire();
       reinitialiserVente();
       reinitialiserAffichageResume();
@@ -564,6 +576,7 @@
       blocAlerte.classList.remove("cache");
     }
 
+    // Reçoit les produits depuis la base, puis dessine la liste
     function afficherProduits(instantane) {
       produitsActuels = instantane.docs.map((d) => {
         const data = d.data();
@@ -579,17 +592,27 @@
       });
       remplirListeVente();
       afficherAlerte();
+      instantaneProduits = instantane;
+      dessinerListeProduits();
+    }
 
+    // Dessine la liste des produits, en tenant compte de la recherche
+    function dessinerListeProduits() {
       listeProduits.innerHTML = "";
-      if (instantane.empty) {
+      if (!instantaneProduits) return;
+      if (instantaneProduits.empty) {
         const vide = document.createElement("li");
         vide.className = "vide";
         vide.textContent = "Aucun produit pour le moment.";
         listeProduits.appendChild(vide);
         return;
       }
-      instantane.forEach((d) => {
+      const mot = simplifier(champRecherche.value.trim());
+      let nbAffiches = 0;
+      instantaneProduits.forEach((d) => {
         const p = d.data();
+        if (mot !== "" && !simplifier(p.nom).includes(mot)) return;
+        nbAffiches += 1;
         const entrees = entreesDe(p);
         const totalRecu = somme(entrees);
         const li = document.createElement("li");
@@ -658,7 +681,17 @@
         li.appendChild(actions);
         listeProduits.appendChild(li);
       });
+
+      if (nbAffiches === 0) {
+        const aucun = document.createElement("li");
+        aucun.className = "vide";
+        aucun.textContent = "Aucun produit ne correspond à ta recherche.";
+        listeProduits.appendChild(aucun);
+      }
     }
+
+    // La liste se met à jour pendant qu'on écrit dans la case de recherche
+    champRecherche.addEventListener("input", dessinerListeProduits);
 
     function afficherVentes(instantane) {
       listeVentes.innerHTML = "";
@@ -904,7 +937,7 @@
         arreterEcouteBoutiques = onSnapshot(
           requete,
           afficherBoutiques,
-          () => { messageBoutique.textContent = "Impossible d'afficher tes boutiques."; }
+          () => { messageBoutique.textContent = "Impossible de charger tes boutiques."; }
         );
       } else {
         montrer(ecranConnexion);
@@ -918,4 +951,4 @@
     }
   </script>
 </body>
-          </html>
+        </html>
