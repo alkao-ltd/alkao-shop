@@ -111,7 +111,7 @@
         <h3>Résumé des ventes</h3>
         <div id="resume-nb">Nombre de ventes : …</div>
         <div id="resume-total">Argent encaissé : …</div>
-        <button id="btn-reinit-resume" class="gris">Remettre le résumé à zéro</button>
+        <button id="btn-reinit-resume" class="danger">Tout remettre à zéro (ventes et résumé)</button>
       </div>
     </div>
   </main>
@@ -790,17 +790,38 @@
       messageVente.textContent = texte;
     });
 
-    btnReinitResume.addEventListener("click", () => {
-      if (!confirm("Remettre le résumé des ventes à zéro ? Le stock et la liste des dernières ventes ne changent pas.")) return;
+    // Tout remettre à zéro : efface toutes les ventes (liste et résumé)
+    // Le stock et les produits ne changent pas. Demande internet.
+    btnReinitResume.addEventListener("click", async () => {
       messageVente.style.color = "";
       messageVente.textContent = "";
-      updateDoc(refBoutiqueActuelle(), {
-        nbVentes: 0,
-        totalVentes: 0,
-        resumeRemisLe: serverTimestamp()
-      }).catch(() => {
-        messageVente.textContent = "Impossible de remettre à zéro. Réessaie.";
-      });
+      if (!navigator.onLine) {
+        messageVente.textContent = "Pour tout remettre à zéro, connecte-toi à internet.";
+        return;
+      }
+      if (!confirm("Effacer TOUTES les ventes (la liste et le résumé) et repartir de zéro ? Le stock et les produits ne changent pas. Cette action est définitive.")) return;
+      btnReinitResume.disabled = true;
+      try {
+        const refB = refBoutiqueActuelle();
+        const contenu = await getDocs(dossierVentes());
+        const liste = contenu.docs;
+        for (let i = 0; i < liste.length; i += 400) {
+          const lot = writeBatch(db);
+          liste.slice(i, i + 400).forEach((d) => lot.delete(d.ref));
+          await lot.commit();
+        }
+        await updateDoc(refB, {
+          nbVentes: 0,
+          totalVentes: 0,
+          resumeRemisLe: serverTimestamp()
+        });
+        messageVente.style.color = "#1e8449";
+        messageVente.textContent = "Ventes effacées : tout repart de zéro.";
+      } catch (e) {
+        messageVente.style.color = "";
+        messageVente.textContent = "Impossible de tout remettre à zéro. Vérifie ta connexion.";
+      }
+      btnReinitResume.disabled = false;
     });
 
     btnAnnuler.addEventListener("click", reinitialiserFormulaire);
@@ -883,7 +904,7 @@
         arreterEcouteBoutiques = onSnapshot(
           requete,
           afficherBoutiques,
-          () => { messageBoutique.textContent = "Impossible de charger tes boutiques."; }
+          () => { messageBoutique.textContent = "Impossible d'afficher tes boutiques."; }
         );
       } else {
         montrer(ecranConnexion);
@@ -897,4 +918,4 @@
     }
   </script>
 </body>
-        </html>
+          </html>
