@@ -14,6 +14,7 @@
     header { background: #1b6ef3; color: white; padding: 10px 16px; display: flex; align-items: center; justify-content: center; gap: 12px; }
     header img { width: 48px; height: 48px; border-radius: 10px; flex-shrink: 0; }
     header h1 { margin: 0; font-size: 19px; line-height: 1.2; }
+    .bandeau { background: #f5b041; color: #222; text-align: center; padding: 8px 12px; font-size: 14px; }
     main { padding: 16px; max-width: 420px; margin: 0 auto; }
     .carte { background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
     .cache { display: none; }
@@ -41,6 +42,7 @@
     .etiquette { display: inline-block; background: #c0392b; color: white; border-radius: 6px; font-size: 12px; padding: 2px 6px; margin-left: 6px; vertical-align: middle; }
     .astuce { color: #888; }
     #aide-stock { margin: 0 0 8px 0; font-size: 14px; }
+    #aide-quantite { margin: 0 0 4px 0; font-size: 16px; font-weight: bold; color: #1e8449; min-height: 20px; }
     .resume { background: #fff8e1; border: 1px solid #f0d78c; border-radius: 10px; padding: 12px; margin-top: 16px; }
     .resume h3 { margin-top: 0; }
     .resume div { font-size: 17px; margin: 6px 0; }
@@ -51,6 +53,8 @@
     <img src="logo.png" alt="Logo Alkao">
     <h1>Gestionnaire de boutique</h1>
   </header>
+
+  <div id="bandeau-hors-ligne" class="bandeau cache">Hors connexion : tes ventes restent sur ce téléphone et seront envoyées dès le retour d'internet.</div>
 
   <main>
     <div id="ecran-connexion" class="carte">
@@ -81,7 +85,9 @@
       <div class="bloc-vente">
         <h3>Enregistrer une vente</h3>
         <select id="vente-produit"></select>
-        <input id="vente-quantite" type="number" inputmode="numeric" min="1" placeholder="Quantité vendue">
+        <input id="vente-quantite" type="text" inputmode="tel" autocomplete="off" placeholder="Quantité vendue (ex. 3 ou 3+15)">
+        <p id="aide-quantite"></p>
+        <button id="btn-plus" type="button" class="gris">+ Ajouter une autre quantité</button>
         <button id="btn-vendre" class="vert">Enregistrer la vente</button>
         <p id="message-vente"></p>
       </div>
@@ -121,13 +127,16 @@
     } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
     import {
       getFirestore,
+      initializeFirestore,
+      persistentLocalCache,
+      persistentMultipleTabManager,
       collection,
       addDoc,
       updateDoc,
       deleteDoc,
       getDocs,
       writeBatch,
-      runTransaction,
+      increment,
       doc,
       onSnapshot,
       query,
@@ -147,8 +156,18 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
 
+    // Mémoire hors connexion : les données restent sur le téléphone
+    let db;
+    try {
+      db = initializeFirestore(app, {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+      });
+    } catch (e) {
+      db = getFirestore(app);
+    }
+
+    const bandeauHorsLigne = document.getElementById("bandeau-hors-ligne");
     const ecranConnexion = document.getElementById("ecran-connexion");
     const ecranAccueil = document.getElementById("ecran-accueil");
     const ecranBoutique = document.getElementById("ecran-boutique");
@@ -177,6 +196,8 @@
     const listeProduits = document.getElementById("liste-produits");
     const champVenteProduit = document.getElementById("vente-produit");
     const champVenteQuantite = document.getElementById("vente-quantite");
+    const aideQuantite = document.getElementById("aide-quantite");
+    const btnPlus = document.getElementById("btn-plus");
     const btnVendre = document.getElementById("btn-vendre");
     const messageVente = document.getElementById("message-vente");
     const listeVentes = document.getElementById("liste-ventes");
@@ -192,9 +213,18 @@
     let arreterEcouteVentes = null;
     let arreterEcouteResume = null;
     let resumeCalcule = false;
+    let resumeActif = false;
     let boutiqueActuelle = null;
     let produitEnModification = null;
     let produitsActuels = [];
+
+    // Bandeau « Hors connexion »
+    function majConnexion() {
+      bandeauHorsLigne.classList.toggle("cache", navigator.onLine);
+    }
+    window.addEventListener("online", majConnexion);
+    window.addEventListener("offline", majConnexion);
+    majConnexion();
 
     function montrer(ecran) {
       [ecranConnexion, ecranAccueil, ecranBoutique].forEach((e) => e.classList.add("cache"));
@@ -279,21 +309,18 @@
       return p.stock > 0 ? [p.stock] : [];
     }
 
-    btnAjouter.addEventListener("click", async () => {
+    // Ajout d'une boutique (sans attendre le serveur : marche hors connexion)
+    btnAjouter.addEventListener("click", () => {
       messageBoutique.textContent = "";
       const nom = champNomBoutique.value.trim();
       if (nom.length === 0) {
         messageBoutique.textContent = "Écris le nom de la boutique.";
         return;
       }
-      btnAjouter.disabled = true;
-      try {
-        await addDoc(dossierBoutiques(), { nom: nom, creeLe: serverTimestamp() });
-        champNomBoutique.value = "";
-      } catch (e) {
-        messageBoutique.textContent = "Impossible d'ajouter. Vérifie ta connexion.";
-      }
-      btnAjouter.disabled = false;
+      addDoc(dossierBoutiques(), { nom: nom, creeLe: serverTimestamp() }).catch(() => {
+        messageBoutique.textContent = "Impossible d'ajouter la boutique. Réessaie.";
+      });
+      champNomBoutique.value = "";
     });
 
     async function supprimerBoutique(id) {
@@ -336,8 +363,12 @@
         btnSupprimer.className = "petit danger";
         btnSupprimer.textContent = "Supprimer";
         btnSupprimer.addEventListener("click", async () => {
-          if (!confirm("Supprimer la boutique « " + nomBoutique + " », ses produits et ses ventes ?")) return;
           messageBoutique.textContent = "";
+          if (!navigator.onLine) {
+            messageBoutique.textContent = "Pour supprimer une boutique, connecte-toi à internet.";
+            return;
+          }
+          if (!confirm("Supprimer la boutique « " + nomBoutique + " », ses produits et ses ventes ?")) return;
           try {
             await supprimerBoutique(d.id);
           } catch (e) {
@@ -369,6 +400,7 @@
 
     function reinitialiserVente() {
       champVenteQuantite.value = "";
+      aideQuantite.textContent = "";
       messageVente.textContent = "";
       messageVente.style.color = "";
     }
@@ -383,9 +415,10 @@
       if (!instantane.exists()) return;
       const b = instantane.data();
       const aCompteurs = Number.isInteger(b.nbVentes) && typeof b.totalVentes === "number";
+      resumeActif = aCompteurs;
       if (!aCompteurs) {
         // Première ouverture avec ce résumé : on compte les ventes déjà faites
-        if (!resumeCalcule) {
+        if (!resumeCalcule && navigator.onLine) {
           resumeCalcule = true;
           calculerResumeDepuisVentes();
         }
@@ -440,6 +473,7 @@
 
       if (arreterEcouteResume) arreterEcouteResume();
       resumeCalcule = false;
+      resumeActif = false;
       arreterEcouteResume = onSnapshot(
         refBoutiqueActuelle(),
         afficherResume,
@@ -463,6 +497,7 @@
         arreterEcouteResume();
         arreterEcouteResume = null;
       }
+      resumeActif = false;
       boutiqueActuelle = null;
       produitsActuels = [];
       reinitialiserFormulaire();
@@ -608,15 +643,13 @@
         const btnSupprimer = document.createElement("button");
         btnSupprimer.className = "petit danger";
         btnSupprimer.textContent = "Supprimer";
-        btnSupprimer.addEventListener("click", async () => {
+        btnSupprimer.addEventListener("click", () => {
           if (!confirm("Supprimer le produit « " + p.nom + " » ?")) return;
           messageProduit.textContent = "";
-          try {
-            await deleteDoc(doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", d.id));
-            if (produitEnModification === d.id) reinitialiserFormulaire();
-          } catch (e) {
+          deleteDoc(doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", d.id)).catch(() => {
             messageProduit.textContent = "Impossible de supprimer. Réessaie.";
-          }
+          });
+          if (produitEnModification === d.id) reinitialiserFormulaire();
         });
 
         actions.appendChild(btnModifier);
@@ -660,100 +693,120 @@
       });
     }
 
-    btnVendre.addEventListener("click", async () => {
+    // Quantité vendue : un nombre, ou plusieurs nombres séparés par + (ex. 3+15)
+    function lireQuantites() {
+      const parties = champVenteQuantite.value.replace(/\s/g, "").split("+");
+      const valide = parties.every((x) => /^[0-9]+$/.test(x));
+      return { parties: parties, valide: valide, total: valide ? somme(parties.map(Number)) : 0 };
+    }
+
+    // Affiche le total pendant qu'on écrit (ex. 3+15 → Total : 18)
+    champVenteQuantite.addEventListener("input", () => {
+      const q = lireQuantites();
+      aideQuantite.textContent = (q.valide && q.parties.length > 1) ? "Total : " + q.total : "";
+    });
+
+    // Bouton « + Ajouter une autre quantité » : ajoute le signe + à la fin
+    btnPlus.addEventListener("click", () => {
+      let texte = champVenteQuantite.value.replace(/\s/g, "");
+      if (texte !== "" && !texte.endsWith("+")) {
+        texte += "+";
+      }
+      champVenteQuantite.value = texte;
+      champVenteQuantite.focus();
+    });
+
+    // Enregistrement d'une vente (sans attendre le serveur : marche hors connexion)
+    btnVendre.addEventListener("click", () => {
       messageVente.style.color = "";
       messageVente.textContent = "";
       const idProduit = champVenteProduit.value;
-      const quantite = Number(champVenteQuantite.value);
+      const q = lireQuantites();
+      const quantite = q.total;
 
       if (!idProduit) {
         messageVente.textContent = "Choisis un produit.";
         return;
       }
-      if (champVenteQuantite.value === "" || !Number.isInteger(quantite) || quantite < 1 || quantite > 1000000) {
-        messageVente.textContent = "Quantité invalide : écris un nombre entier (1 minimum).";
+      if (!q.valide || quantite < 1 || quantite > 1000000) {
+        messageVente.textContent = "Quantité invalide : écris un nombre entier (ex. 3 ou 3+15).";
         return;
       }
 
-      btnVendre.disabled = true;
-      try {
-        const refProduit = doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", idProduit);
-        const refB = refBoutiqueActuelle();
-        const refVente = doc(dossierVentes());
-        const resume = await runTransaction(db, async (transaction) => {
-          const instantane = await transaction.get(refProduit);
-          const instantaneBoutique = await transaction.get(refB);
-          if (!instantane.exists()) throw new Error("introuvable");
-          const p = instantane.data();
-          if (p.stock < quantite) throw new Error("stock:" + p.stock);
-          const b = instantaneBoutique.exists() ? instantaneBoutique.data() : {};
-          const aCompteurs = Number.isInteger(b.nbVentes) && typeof b.totalVentes === "number";
-          const total = p.prix * quantite;
-          const restant = p.stock - quantite;
-          transaction.update(refProduit, { stock: restant, modifieLe: serverTimestamp() });
-          transaction.set(refVente, {
-            produitId: idProduit,
-            nom: p.nom,
-            prix: p.prix,
-            quantite: quantite,
-            total: total,
-            creeLe: serverTimestamp()
-          });
-          if (aCompteurs) {
-            transaction.update(refB, {
-              nbVentes: b.nbVentes + 1,
-              totalVentes: b.totalVentes + total
-            });
-          }
-          return {
-            nom: p.nom,
-            total: total,
-            restant: restant,
-            bas: enAlerte(restant, somme(entreesDe(p)))
-          };
-        });
-        champVenteQuantite.value = "";
-        let texte = "Vente enregistrée : " + quantite + " × " + resume.nom + " = " + formaterFcfa(resume.total);
-        if (resume.bas) {
-          texte += resume.restant === 0
-            ? " ⚠ Rupture de stock !"
-            : " ⚠ Stock bas : il ne reste que " + resume.restant + ".";
-          messageVente.style.color = "#b9770e";
-        } else {
-          messageVente.style.color = "#1e8449";
-        }
-        messageVente.textContent = texte;
-      } catch (e) {
-        messageVente.style.color = "";
-        if (e.message && e.message.startsWith("stock:")) {
-          messageVente.textContent = "Stock insuffisant : il reste " + e.message.slice(6) + ".";
-        } else if (e.message === "introuvable") {
-          messageVente.textContent = "Ce produit n'existe plus.";
-        } else {
-          messageVente.textContent = "Impossible d'enregistrer la vente. Vérifie ta connexion.";
-        }
+      const p = produitsActuels.find((x) => x.id === idProduit);
+      if (!p) {
+        messageVente.textContent = "Ce produit n'existe plus.";
+        return;
       }
-      btnVendre.disabled = produitsActuels.length === 0;
+      if (p.stock < quantite) {
+        messageVente.textContent = "Stock insuffisant : il reste " + p.stock + ".";
+        return;
+      }
+
+      const total = p.prix * quantite;
+      const restant = p.stock - quantite;
+      const refProduit = doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", idProduit);
+      const refVente = doc(dossierVentes());
+
+      const lot = writeBatch(db);
+      lot.update(refProduit, { stock: increment(-quantite), modifieLe: serverTimestamp() });
+      lot.set(refVente, {
+        produitId: idProduit,
+        nom: p.nom,
+        prix: p.prix,
+        quantite: quantite,
+        total: total,
+        creeLe: serverTimestamp()
+      });
+      if (resumeActif) {
+        lot.update(refBoutiqueActuelle(), {
+          nbVentes: increment(1),
+          totalVentes: increment(total)
+        });
+      }
+      lot.commit().catch(() => {
+        messageVente.style.color = "";
+        messageVente.textContent = "Cette vente n'a pas pu être enregistrée. Vérifie la liste des ventes.";
+      });
+
+      champVenteQuantite.value = "";
+      aideQuantite.textContent = "";
+      let texte = "Vente enregistrée : " + quantite + " × " + p.nom;
+      if (q.parties.length > 1) {
+        texte += " (" + q.parties.join(" + ") + ")";
+      }
+      texte += " = " + formaterFcfa(total);
+      if (enAlerte(restant, p.stockDepart)) {
+        texte += restant === 0
+          ? " ⚠ Rupture de stock !"
+          : " ⚠ Stock bas : il ne reste que " + restant + ".";
+        messageVente.style.color = "#b9770e";
+      } else {
+        messageVente.style.color = "#1e8449";
+      }
+      if (!navigator.onLine) {
+        texte += " (sera envoyée au retour d'internet)";
+      }
+      messageVente.textContent = texte;
     });
 
-    btnReinitResume.addEventListener("click", async () => {
+    btnReinitResume.addEventListener("click", () => {
       if (!confirm("Remettre le résumé des ventes à zéro ? Le stock et la liste des dernières ventes ne changent pas.")) return;
       messageVente.style.color = "";
       messageVente.textContent = "";
-      try {
-        await updateDoc(refBoutiqueActuelle(), {
-          nbVentes: 0,
-          totalVentes: 0,
-          resumeRemisLe: serverTimestamp()
-        });
-      } catch (e) {
-        messageVente.textContent = "Impossible de remettre à zéro. Vérifie ta connexion.";
-      }
+      updateDoc(refBoutiqueActuelle(), {
+        nbVentes: 0,
+        totalVentes: 0,
+        resumeRemisLe: serverTimestamp()
+      }).catch(() => {
+        messageVente.textContent = "Impossible de remettre à zéro. Réessaie.";
+      });
     });
 
     btnAnnuler.addEventListener("click", reinitialiserFormulaire);
 
-    btnEnregistrerProduit.addEventListener("click", async () => {
+    // Ajout ou modification d'un produit (sans attendre le serveur)
+    btnEnregistrerProduit.addEventListener("click", () => {
       messageProduit.textContent = "";
       const nom = champNomProduit.value.trim();
       const prix = Number(champPrix.value);
@@ -780,24 +833,20 @@
           return;
         }
         const nouvellesEntrees = ajout > 0 ? actuel.entrees.concat([ajout]) : actuel.entrees;
-        btnEnregistrerProduit.disabled = true;
-        try {
-          await updateDoc(
-            doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", produitEnModification),
-            {
-              nom: nom,
-              prix: prix,
-              stock: actuel.stock + ajout,
-              stockDepart: somme(nouvellesEntrees),
-              entrees: nouvellesEntrees,
-              modifieLe: serverTimestamp()
-            }
-          );
-          reinitialiserFormulaire();
-        } catch (e) {
-          messageProduit.textContent = "Impossible d'enregistrer. Vérifie ta connexion.";
-        }
-        btnEnregistrerProduit.disabled = false;
+        updateDoc(
+          doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", produitEnModification),
+          {
+            nom: nom,
+            prix: prix,
+            stock: increment(ajout),
+            stockDepart: somme(nouvellesEntrees),
+            entrees: nouvellesEntrees,
+            modifieLe: serverTimestamp()
+          }
+        ).catch(() => {
+          messageProduit.textContent = "Impossible d'enregistrer. Réessaie.";
+        });
+        reinitialiserFormulaire();
         return;
       }
 
@@ -807,21 +856,17 @@
         messageProduit.textContent = "Stock invalide : écris un nombre entier.";
         return;
       }
-      btnEnregistrerProduit.disabled = true;
-      try {
-        await addDoc(dossierProduits(), {
-          nom: nom,
-          prix: prix,
-          stock: stock,
-          stockDepart: stock,
-          entrees: stock > 0 ? [stock] : [],
-          creeLe: serverTimestamp()
-        });
-        reinitialiserFormulaire();
-      } catch (e) {
-        messageProduit.textContent = "Impossible d'enregistrer. Vérifie ta connexion.";
-      }
-      btnEnregistrerProduit.disabled = false;
+      addDoc(dossierProduits(), {
+        nom: nom,
+        prix: prix,
+        stock: stock,
+        stockDepart: stock,
+        entrees: stock > 0 ? [stock] : [],
+        creeLe: serverTimestamp()
+      }).catch(() => {
+        messageProduit.textContent = "Impossible d'enregistrer. Réessaie.";
+      });
+      reinitialiserFormulaire();
     });
 
     onAuthStateChanged(auth, (utilisateur) => {
@@ -852,4 +897,4 @@
     }
   </script>
 </body>
-        </html>
+  </html>
