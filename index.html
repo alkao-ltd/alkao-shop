@@ -48,6 +48,7 @@
     .resume div { font-size: 17px; margin: 6px 0; }
     #resume-produits { margin-top: 10px; padding-top: 8px; border-top: 1px solid #f0d78c; }
     #resume-produits div { font-size: 15px; margin: 4px 0; }
+    #ensemble-note { display: block; color: #888; font-size: 14px; margin-top: 8px; }
     .historique { background: #f4f6fb; border: 1px solid #d5dbe8; border-radius: 10px; padding: 12px; margin-top: 8px; }
     .historique h3 { margin-top: 0; }
     .historique label { display: block; font-size: 14px; color: #555; margin-top: 6px; }
@@ -75,6 +76,15 @@
     <div id="ecran-accueil" class="carte cache">
       <p id="qui"></p>
       <h2>Mes boutiques</h2>
+
+      <div id="vue-ensemble" class="resume cache">
+        <h3>Vue d'ensemble</h3>
+        <div id="ensemble-boutiques"></div>
+        <div id="ensemble-ventes"></div>
+        <div id="ensemble-argent"></div>
+        <small id="ensemble-note"></small>
+      </div>
+
       <input id="nom-boutique" type="text" placeholder="Nom de la boutique" maxlength="60">
       <button id="btn-ajouter">Ajouter la boutique</button>
       <p id="message-boutique"></p>
@@ -198,6 +208,11 @@
     const btnDeco = document.getElementById("btn-deco");
     const message = document.getElementById("message");
     const qui = document.getElementById("qui");
+    const vueEnsemble = document.getElementById("vue-ensemble");
+    const ensembleBoutiques = document.getElementById("ensemble-boutiques");
+    const ensembleVentes = document.getElementById("ensemble-ventes");
+    const ensembleArgent = document.getElementById("ensemble-argent");
+    const ensembleNote = document.getElementById("ensemble-note");
     const champNomBoutique = document.getElementById("nom-boutique");
     const btnAjouter = document.getElementById("btn-ajouter");
     const messageBoutique = document.getElementById("message-boutique");
@@ -372,8 +387,10 @@
       await deleteDoc(doc(db, "users", utilisateurActuel.uid, "boutiques", id));
     }
 
+    // Liste des boutiques, avec la vue d'ensemble (ventes et argent de chaque boutique)
     function afficherBoutiques(instantane) {
       listeBoutiques.innerHTML = "";
+      vueEnsemble.classList.add("cache");
       if (instantane.empty) {
         const vide = document.createElement("li");
         vide.className = "vide";
@@ -381,11 +398,36 @@
         listeBoutiques.appendChild(vide);
         return;
       }
+
+      let nbBoutiques = 0;
+      let totalVentes = 0;
+      let totalArgent = 0;
+      let nbSansResume = 0;
+
       instantane.forEach((d) => {
-        const nomBoutique = d.data().nom;
+        const data = d.data();
+        const nomBoutique = data.nom;
+        const aResume = Number.isInteger(data.nbVentes) && typeof data.totalVentes === "number";
+        nbBoutiques += 1;
+        if (aResume) {
+          totalVentes += data.nbVentes;
+          totalArgent += data.totalVentes;
+        } else {
+          nbSansResume += 1;
+        }
+
         const li = document.createElement("li");
-        const nom = document.createElement("span");
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const nom = document.createElement("strong");
         nom.textContent = nomBoutique;
+        const detail = document.createElement("small");
+        detail.textContent = aResume
+          ? data.nbVentes + (data.nbVentes > 1 ? " ventes" : " vente") + " · " + formaterFcfa(data.totalVentes)
+          : "Résumé pas encore calculé (ouvre la boutique une fois)";
+        info.appendChild(nom);
+        info.appendChild(detail);
 
         const actions = document.createElement("div");
         actions.className = "actions";
@@ -414,10 +456,20 @@
 
         actions.appendChild(btnOuvrir);
         actions.appendChild(btnSupprimer);
-        li.appendChild(nom);
+        li.appendChild(info);
         li.appendChild(actions);
         listeBoutiques.appendChild(li);
       });
+
+      // Vue d'ensemble : toutes les boutiques ensemble
+      ensembleBoutiques.textContent = "Boutiques : " + nbBoutiques;
+      ensembleVentes.textContent = "Ventes : " + totalVentes;
+      ensembleArgent.textContent = "Argent encaissé : " + formaterFcfa(totalArgent);
+      ensembleNote.textContent = nbSansResume > 0
+        ? nbSansResume + (nbSansResume > 1 ? " boutiques pas encore comptées" : " boutique pas encore comptée")
+          + " : ouvre-" + (nbSansResume > 1 ? "les" : "la") + " une fois avec internet."
+        : "";
+      vueEnsemble.classList.remove("cache");
     }
 
     function reinitialiserFormulaire() {
@@ -1089,6 +1141,7 @@
       } else {
         montrer(ecranConnexion);
         listeBoutiques.innerHTML = "";
+        vueEnsemble.classList.add("cache");
         champMdp.value = "";
       }
     });
@@ -1098,4 +1151,4 @@
     }
   </script>
 </body>
-      </html>
+        </html>
