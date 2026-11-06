@@ -48,6 +48,10 @@
     .resume div { font-size: 17px; margin: 6px 0; }
     #resume-produits { margin-top: 10px; padding-top: 8px; border-top: 1px solid #f0d78c; }
     #resume-produits div { font-size: 15px; margin: 4px 0; }
+    .historique { background: #f4f6fb; border: 1px solid #d5dbe8; border-radius: 10px; padding: 12px; margin-top: 8px; }
+    .historique h3 { margin-top: 0; }
+    .historique label { display: block; font-size: 14px; color: #555; margin-top: 6px; }
+    #histo-total { font-weight: bold; margin: 10px 0 0 0; }
   </style>
 </head>
 <body>
@@ -109,6 +113,18 @@
 
       <h3>Dernières ventes</h3>
       <ul id="liste-ventes"></ul>
+
+      <button id="btn-historique" class="gris">Voir l'historique complet</button>
+      <div id="bloc-historique" class="historique cache">
+        <h3>Historique complet</h3>
+        <label for="histo-du">Du</label>
+        <input id="histo-du" type="date">
+        <label for="histo-au">Au</label>
+        <input id="histo-au" type="date">
+        <button id="btn-histo-toutes" class="gris">Toutes les dates</button>
+        <p id="histo-total"></p>
+        <ul id="liste-historique"></ul>
+      </div>
 
       <div class="resume">
         <h3>Résumé des ventes</h3>
@@ -205,6 +221,13 @@
     const btnVendre = document.getElementById("btn-vendre");
     const messageVente = document.getElementById("message-vente");
     const listeVentes = document.getElementById("liste-ventes");
+    const btnHistorique = document.getElementById("btn-historique");
+    const blocHistorique = document.getElementById("bloc-historique");
+    const histoDu = document.getElementById("histo-du");
+    const histoAu = document.getElementById("histo-au");
+    const btnHistoToutes = document.getElementById("btn-histo-toutes");
+    const histoTotal = document.getElementById("histo-total");
+    const listeHistorique = document.getElementById("liste-historique");
     const blocAlerte = document.getElementById("alerte-stock");
     const resumeNb = document.getElementById("resume-nb");
     const resumeTotal = document.getElementById("resume-total");
@@ -224,6 +247,7 @@
     let produitsActuels = [];
     let instantaneProduits = null;
     let ventesActuelles = [];
+    let historiqueOuvert = false;
 
     // Bandeau « Hors connexion »
     function majConnexion() {
@@ -423,6 +447,17 @@
       resumeProduits.innerHTML = "";
     }
 
+    // Ferme l'historique et efface les dates choisies
+    function reinitialiserHistorique() {
+      historiqueOuvert = false;
+      blocHistorique.classList.add("cache");
+      btnHistorique.textContent = "Voir l'historique complet";
+      histoDu.value = "";
+      histoAu.value = "";
+      histoTotal.textContent = "";
+      listeHistorique.innerHTML = "";
+    }
+
     // Affiche le résumé cumulé de la boutique
     function afficherResume(instantane) {
       if (!instantane.exists()) return;
@@ -465,6 +500,7 @@
       reinitialiserFormulaire();
       reinitialiserVente();
       reinitialiserAffichageResume();
+      reinitialiserHistorique();
       champRecherche.value = "";
       instantaneProduits = null;
       ventesActuelles = [];
@@ -523,6 +559,7 @@
       reinitialiserFormulaire();
       reinitialiserVente();
       reinitialiserAffichageResume();
+      reinitialiserHistorique();
       listeProduits.innerHTML = "";
       listeVentes.innerHTML = "";
       champVenteProduit.innerHTML = "";
@@ -701,11 +738,17 @@
     // La liste se met à jour pendant qu'on écrit dans la case de recherche
     champRecherche.addEventListener("input", dessinerListeProduits);
 
-    // Reçoit toutes les ventes, puis dessine la liste et le résumé par produit
+    // Date d'une vente (une vente pas encore envoyée compte comme « maintenant »)
+    function dateDeVente(v) {
+      return v.creeLe && v.creeLe.toDate ? v.creeLe.toDate() : new Date();
+    }
+
+    // Reçoit toutes les ventes, puis dessine la liste, le résumé et l'historique
     function afficherVentes(instantane) {
       ventesActuelles = instantane.docs.map((d) => d.data());
       dessinerListeVentes();
       dessinerResumeProduits();
+      dessinerHistorique();
     }
 
     // Les 20 dernières ventes
@@ -740,6 +783,72 @@
         listeVentes.appendChild(li);
       });
     }
+
+    // Historique complet : toutes les ventes, avec choix des dates
+    function dessinerHistorique() {
+      listeHistorique.innerHTML = "";
+      histoTotal.textContent = "";
+      if (!historiqueOuvert) return;
+
+      const du = histoDu.value ? new Date(histoDu.value + "T00:00:00") : null;
+      const au = histoAu.value ? new Date(histoAu.value + "T23:59:59.999") : null;
+      const choisies = ventesActuelles.filter((v) => {
+        const quand = dateDeVente(v);
+        if (du && quand < du) return false;
+        if (au && quand > au) return false;
+        return true;
+      });
+
+      if (choisies.length === 0) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucune vente pour cette période.";
+        listeHistorique.appendChild(vide);
+        return;
+      }
+
+      const total = choisies.reduce((a, v) => a + (Number(v.total) || 0), 0);
+      histoTotal.textContent = choisies.length + (choisies.length > 1 ? " ventes" : " vente") + " · " + formaterFcfa(total);
+
+      choisies.slice(0, 300).forEach((v) => {
+        const li = document.createElement("li");
+        const info = document.createElement("div");
+        info.className = "info";
+        const titreVente = document.createElement("strong");
+        titreVente.textContent = v.quantite + " × " + v.nom;
+        const detail = document.createElement("small");
+        detail.textContent = formaterFcfa(v.total) + " · " + dateDeVente(v).toLocaleString("fr-FR", {
+          day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit"
+        });
+        info.appendChild(titreVente);
+        info.appendChild(detail);
+        li.appendChild(info);
+        listeHistorique.appendChild(li);
+      });
+
+      if (choisies.length > 300) {
+        const note = document.createElement("li");
+        note.className = "vide";
+        note.textContent = "Affichage des 300 ventes les plus récentes. Le total ci-dessus compte toutes les ventes de la période.";
+        listeHistorique.appendChild(note);
+      }
+    }
+
+    btnHistorique.addEventListener("click", () => {
+      historiqueOuvert = !historiqueOuvert;
+      blocHistorique.classList.toggle("cache", !historiqueOuvert);
+      btnHistorique.textContent = historiqueOuvert ? "Masquer l'historique" : "Voir l'historique complet";
+      dessinerHistorique();
+    });
+
+    histoDu.addEventListener("change", dessinerHistorique);
+    histoAu.addEventListener("change", dessinerHistorique);
+
+    btnHistoToutes.addEventListener("click", () => {
+      histoDu.value = "";
+      histoAu.value = "";
+      dessinerHistorique();
+    });
 
     // Résumé par produit : nombre vendu et argent encaissé pour chaque produit
     function dessinerResumeProduits() {
@@ -989,4 +1098,4 @@
     }
   </script>
 </body>
-        </html>
+      </html>
