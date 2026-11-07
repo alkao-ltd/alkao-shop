@@ -26,7 +26,7 @@
     button.vert { background: #1e8449; }
     button.petit { width: auto; margin: 0; padding: 8px 12px; font-size: 14px; }
     button.danger { background: #c0392b; }
-    #message, #message-boutique, #message-produit, #message-vente { color: #c0392b; min-height: 20px; }
+    #message, #message-boutique, #message-produit, #message-vente, #message-vendeur { color: #c0392b; min-height: 20px; }
     h3 { margin: 16px 0 4px 0; }
     ul { list-style: none; padding: 0; margin: 12px 0; }
     li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid #eee; }
@@ -85,11 +85,27 @@
         <small id="ensemble-note"></small>
       </div>
 
+      <button id="btn-mes-vendeurs" class="gris">Mes vendeurs (employés)</button>
+
       <input id="nom-boutique" type="text" placeholder="Nom de la boutique" maxlength="60">
       <button id="btn-ajouter">Ajouter la boutique</button>
       <p id="message-boutique"></p>
       <ul id="liste-boutiques"></ul>
       <button id="btn-deco" class="gris">Se déconnecter</button>
+    </div>
+
+    <div id="ecran-vendeurs" class="carte cache">
+      <button id="btn-retour-vendeurs" class="lien">← Mes boutiques</button>
+      <h2>Mes vendeurs</h2>
+      <p class="astuce">Crée un accès pour un employé. Il pourra seulement enregistrer des ventes dans la boutique que tu choisis. Note bien son mot de passe : il n'est pas gardé.</p>
+      <input id="vendeur-nom" type="text" placeholder="Nom du vendeur" maxlength="60" autocomplete="off">
+      <input id="vendeur-email" type="email" placeholder="Email du vendeur" autocomplete="off">
+      <input id="vendeur-mdp" type="text" placeholder="Mot de passe (6 caractères minimum)" autocomplete="off">
+      <select id="vendeur-boutique"></select>
+      <button id="btn-creer-vendeur" class="vert">Créer le vendeur</button>
+      <p id="message-vendeur"></p>
+      <h3>Mes vendeurs</h3>
+      <ul id="liste-vendeurs"></ul>
     </div>
 
     <div id="ecran-boutique" class="carte cache">
@@ -147,7 +163,7 @@
   </main>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+    import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
     import {
       getAuth,
       createUserWithEmailAndPassword,
@@ -162,6 +178,7 @@
       persistentMultipleTabManager,
       collection,
       addDoc,
+      setDoc,
       updateDoc,
       deleteDoc,
       getDocs,
@@ -170,6 +187,7 @@
       doc,
       onSnapshot,
       query,
+      where,
       orderBy,
       serverTimestamp
     } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
@@ -199,6 +217,7 @@
     const bandeauHorsLigne = document.getElementById("bandeau-hors-ligne");
     const ecranConnexion = document.getElementById("ecran-connexion");
     const ecranAccueil = document.getElementById("ecran-accueil");
+    const ecranVendeurs = document.getElementById("ecran-vendeurs");
     const ecranBoutique = document.getElementById("ecran-boutique");
     const titre = document.getElementById("titre");
     const champEmail = document.getElementById("email");
@@ -213,10 +232,19 @@
     const ensembleVentes = document.getElementById("ensemble-ventes");
     const ensembleArgent = document.getElementById("ensemble-argent");
     const ensembleNote = document.getElementById("ensemble-note");
+    const btnMesVendeurs = document.getElementById("btn-mes-vendeurs");
     const champNomBoutique = document.getElementById("nom-boutique");
     const btnAjouter = document.getElementById("btn-ajouter");
     const messageBoutique = document.getElementById("message-boutique");
     const listeBoutiques = document.getElementById("liste-boutiques");
+    const btnRetourVendeurs = document.getElementById("btn-retour-vendeurs");
+    const champVendeurNom = document.getElementById("vendeur-nom");
+    const champVendeurEmail = document.getElementById("vendeur-email");
+    const champVendeurMdp = document.getElementById("vendeur-mdp");
+    const champVendeurBoutique = document.getElementById("vendeur-boutique");
+    const btnCreerVendeur = document.getElementById("btn-creer-vendeur");
+    const messageVendeur = document.getElementById("message-vendeur");
+    const listeVendeurs = document.getElementById("liste-vendeurs");
     const btnRetour = document.getElementById("btn-retour");
     const titreBoutique = document.getElementById("titre-boutique");
     const titreFormulaire = document.getElementById("titre-formulaire");
@@ -252,12 +280,14 @@
     let modeInscription = false;
     let utilisateurActuel = null;
     let arreterEcouteBoutiques = null;
+    let arreterEcouteVendeurs = null;
     let arreterEcouteProduits = null;
     let arreterEcouteVentes = null;
     let arreterEcouteResume = null;
     let resumeCalcule = false;
     let resumeActif = false;
     let boutiqueActuelle = null;
+    let boutiquesActuelles = [];
     let produitEnModification = null;
     let produitsActuels = [];
     let instantaneProduits = null;
@@ -273,7 +303,7 @@
     majConnexion();
 
     function montrer(ecran) {
-      [ecranConnexion, ecranAccueil, ecranBoutique].forEach((e) => e.classList.add("cache"));
+      [ecranConnexion, ecranAccueil, ecranVendeurs, ecranBoutique].forEach((e) => e.classList.add("cache"));
       ecran.classList.remove("cache");
     }
 
@@ -391,6 +421,7 @@
     function afficherBoutiques(instantane) {
       listeBoutiques.innerHTML = "";
       vueEnsemble.classList.add("cache");
+      boutiquesActuelles = [];
       if (instantane.empty) {
         const vide = document.createElement("li");
         vide.className = "vide";
@@ -408,6 +439,7 @@
         const data = d.data();
         const nomBoutique = data.nom;
         const aResume = Number.isInteger(data.nbVentes) && typeof data.totalVentes === "number";
+        boutiquesActuelles.push({ id: d.id, nom: nomBoutique });
         nbBoutiques += 1;
         if (aResume) {
           totalVentes += data.nbVentes;
@@ -471,6 +503,170 @@
         : "";
       vueEnsemble.classList.remove("cache");
     }
+
+    // ----- Mes vendeurs (employés) -----
+
+    // Remplit le choix de boutique du formulaire vendeur
+    function remplirChoixBoutiquesVendeur() {
+      champVendeurBoutique.innerHTML = "";
+      if (boutiquesActuelles.length === 0) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "Crée d'abord une boutique";
+        champVendeurBoutique.appendChild(option);
+        btnCreerVendeur.disabled = true;
+        return;
+      }
+      btnCreerVendeur.disabled = false;
+      boutiquesActuelles.forEach((b) => {
+        const option = document.createElement("option");
+        option.value = b.id;
+        option.textContent = b.nom;
+        champVendeurBoutique.appendChild(option);
+      });
+    }
+
+    function arreterEcouteDesVendeurs() {
+      if (arreterEcouteVendeurs) {
+        arreterEcouteVendeurs();
+        arreterEcouteVendeurs = null;
+      }
+    }
+
+    function ouvrirEcranVendeurs() {
+      messageVendeur.style.color = "";
+      messageVendeur.textContent = "";
+      remplirChoixBoutiquesVendeur();
+      listeVendeurs.innerHTML = "";
+      montrer(ecranVendeurs);
+      arreterEcouteDesVendeurs();
+      arreterEcouteVendeurs = onSnapshot(
+        query(collection(db, "vendeurs"), where("proprietaireId", "==", utilisateurActuel.uid)),
+        afficherVendeurs,
+        () => { messageVendeur.textContent = "Impossible de charger tes vendeurs."; }
+      );
+    }
+
+    btnMesVendeurs.addEventListener("click", ouvrirEcranVendeurs);
+
+    btnRetourVendeurs.addEventListener("click", () => {
+      arreterEcouteDesVendeurs();
+      montrer(ecranAccueil);
+    });
+
+    function afficherVendeurs(instantane) {
+      listeVendeurs.innerHTML = "";
+      if (instantane.empty) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucun vendeur pour le moment.";
+        listeVendeurs.appendChild(vide);
+        return;
+      }
+      const vendeurs = instantane.docs.map((d) => ({ id: d.id, ...d.data() }));
+      vendeurs.sort((a, b) => String(a.nom || "").localeCompare(String(b.nom || ""), "fr"));
+      vendeurs.forEach((v) => {
+        const li = document.createElement("li");
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const nom = document.createElement("strong");
+        nom.textContent = v.nom;
+        const detail = document.createElement("small");
+        detail.textContent = v.email + " · " + (v.boutiqueNom || "boutique");
+        info.appendChild(nom);
+        info.appendChild(detail);
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+        const btnRetirer = document.createElement("button");
+        btnRetirer.className = "petit danger";
+        btnRetirer.textContent = "Retirer l'accès";
+        btnRetirer.addEventListener("click", async () => {
+          if (!confirm("Retirer l'accès de « " + v.nom + " » ? Il ne pourra plus enregistrer de ventes.")) return;
+          messageVendeur.style.color = "";
+          messageVendeur.textContent = "";
+          try {
+            await deleteDoc(doc(db, "vendeurs", v.id));
+          } catch (e) {
+            messageVendeur.textContent = "Impossible de retirer l'accès. Vérifie ta connexion.";
+          }
+        });
+        actions.appendChild(btnRetirer);
+
+        li.appendChild(info);
+        li.appendChild(actions);
+        listeVendeurs.appendChild(li);
+      });
+    }
+
+    // Création d'un vendeur : compte (email + mot de passe) puis fiche d'accès
+    btnCreerVendeur.addEventListener("click", async () => {
+      messageVendeur.style.color = "";
+      messageVendeur.textContent = "";
+      const nom = champVendeurNom.value.trim();
+      const email = champVendeurEmail.value.trim();
+      const mdp = champVendeurMdp.value;
+      const idBoutique = champVendeurBoutique.value;
+
+      if (nom.length === 0) {
+        messageVendeur.textContent = "Écris le nom du vendeur.";
+        return;
+      }
+      if (email.length === 0) {
+        messageVendeur.textContent = "Écris l'email du vendeur.";
+        return;
+      }
+      if (mdp.length < 6) {
+        messageVendeur.textContent = "Mot de passe trop court (6 caractères minimum).";
+        return;
+      }
+      if (!idBoutique) {
+        messageVendeur.textContent = "Choisis une boutique.";
+        return;
+      }
+      if (!navigator.onLine) {
+        messageVendeur.textContent = "Pour créer un vendeur, connecte-toi à internet.";
+        return;
+      }
+
+      const boutique = boutiquesActuelles.find((b) => b.id === idBoutique);
+      btnCreerVendeur.disabled = true;
+      let appSecondaire = null;
+      let compteCree = false;
+      try {
+        // Une 2e connexion à part, pour ne pas déconnecter le propriétaire
+        appSecondaire = initializeApp(firebaseConfig, "vendeur-" + Date.now());
+        const authSecondaire = getAuth(appSecondaire);
+        const cred = await createUserWithEmailAndPassword(authSecondaire, email, mdp);
+        compteCree = true;
+        await setDoc(doc(db, "vendeurs", cred.user.uid), {
+          proprietaireId: utilisateurActuel.uid,
+          boutiqueId: idBoutique,
+          boutiqueNom: boutique ? boutique.nom : "",
+          nom: nom,
+          email: email,
+          creeLe: serverTimestamp()
+        });
+        await signOut(authSecondaire);
+        champVendeurNom.value = "";
+        champVendeurEmail.value = "";
+        champVendeurMdp.value = "";
+        messageVendeur.style.color = "#1e8449";
+        messageVendeur.textContent = "Vendeur créé : « " + nom + " ». Donne-lui son email et son mot de passe.";
+      } catch (e) {
+        messageVendeur.style.color = "";
+        if (compteCree) {
+          messageVendeur.textContent = "Le compte a été créé, mais l'accès n'a pas pu être enregistré. Réessaie avec un autre email.";
+        } else {
+          messageVendeur.textContent = erreurEnFrancais(e.code);
+        }
+      }
+      if (appSecondaire) {
+        try { await deleteApp(appSecondaire); } catch (e) { /* rien */ }
+      }
+      btnCreerVendeur.disabled = boutiquesActuelles.length === 0;
+    });
 
     function reinitialiserFormulaire() {
       produitEnModification = null;
@@ -1127,7 +1323,9 @@
         arreterEcouteBoutiques();
         arreterEcouteBoutiques = null;
       }
+      arreterEcouteDesVendeurs();
       fermerBoutique();
+      boutiquesActuelles = [];
       utilisateurActuel = utilisateur;
       if (utilisateur) {
         qui.textContent = "Bienvenue !";
@@ -1141,6 +1339,7 @@
       } else {
         montrer(ecranConnexion);
         listeBoutiques.innerHTML = "";
+        listeVendeurs.innerHTML = "";
         vueEnsemble.classList.add("cache");
         champMdp.value = "";
       }
