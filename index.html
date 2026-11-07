@@ -111,6 +111,7 @@
     <div id="ecran-boutique" class="carte cache">
       <button id="btn-retour" class="lien">← Mes boutiques</button>
       <h2 id="titre-boutique"></h2>
+      <p id="info-vendeur" class="astuce cache"></p>
 
       <div id="alerte-stock" class="alerte cache"></div>
 
@@ -124,14 +125,16 @@
         <p id="message-vente"></p>
       </div>
 
-      <h3 id="titre-formulaire">Ajouter un produit</h3>
-      <input id="nom-produit" type="text" placeholder="Nom du produit" maxlength="60">
-      <input id="prix-produit" type="number" inputmode="numeric" min="0" placeholder="Prix (FCFA)">
-      <input id="stock-produit" type="number" inputmode="numeric" min="0" placeholder="Quantité en stock">
-      <p id="aide-stock" class="astuce cache"></p>
-      <button id="btn-enregistrer-produit">Ajouter le produit</button>
-      <button id="btn-annuler" class="gris cache">Annuler la modification</button>
-      <p id="message-produit"></p>
+      <div id="bloc-formulaire-produit">
+        <h3 id="titre-formulaire">Ajouter un produit</h3>
+        <input id="nom-produit" type="text" placeholder="Nom du produit" maxlength="60">
+        <input id="prix-produit" type="number" inputmode="numeric" min="0" placeholder="Prix (FCFA)">
+        <input id="stock-produit" type="number" inputmode="numeric" min="0" placeholder="Quantité en stock">
+        <p id="aide-stock" class="astuce cache"></p>
+        <button id="btn-enregistrer-produit">Ajouter le produit</button>
+        <button id="btn-annuler" class="gris cache">Annuler la modification</button>
+        <p id="message-produit"></p>
+      </div>
 
       <h3>Mes produits</h3>
       <input id="recherche-produit" type="search" autocomplete="off" placeholder="Rechercher un produit">
@@ -152,13 +155,15 @@
         <ul id="liste-historique"></ul>
       </div>
 
-      <div class="resume">
+      <div id="bloc-resume" class="resume">
         <h3>Résumé des ventes</h3>
         <div id="resume-nb">Nombre de ventes : …</div>
         <div id="resume-total">Argent encaissé : …</div>
         <div id="resume-produits"></div>
         <button id="btn-reinit-resume" class="danger">Tout remettre à zéro (ventes et résumé)</button>
       </div>
+
+      <button id="btn-deco-vendeur" class="gris cache">Se déconnecter</button>
     </div>
   </main>
 
@@ -179,6 +184,7 @@
       collection,
       addDoc,
       setDoc,
+      getDoc,
       updateDoc,
       deleteDoc,
       getDocs,
@@ -225,6 +231,7 @@
     const btnPrincipal = document.getElementById("btn-principal");
     const btnBascule = document.getElementById("btn-bascule");
     const btnDeco = document.getElementById("btn-deco");
+    const btnDecoVendeur = document.getElementById("btn-deco-vendeur");
     const message = document.getElementById("message");
     const qui = document.getElementById("qui");
     const vueEnsemble = document.getElementById("vue-ensemble");
@@ -247,6 +254,9 @@
     const listeVendeurs = document.getElementById("liste-vendeurs");
     const btnRetour = document.getElementById("btn-retour");
     const titreBoutique = document.getElementById("titre-boutique");
+    const infoVendeur = document.getElementById("info-vendeur");
+    const blocFormulaireProduit = document.getElementById("bloc-formulaire-produit");
+    const blocResume = document.getElementById("bloc-resume");
     const titreFormulaire = document.getElementById("titre-formulaire");
     const champNomProduit = document.getElementById("nom-produit");
     const champPrix = document.getElementById("prix-produit");
@@ -279,6 +289,7 @@
 
     let modeInscription = false;
     let utilisateurActuel = null;
+    let vendeurInfo = null;
     let arreterEcouteBoutiques = null;
     let arreterEcouteVendeurs = null;
     let arreterEcouteProduits = null;
@@ -305,6 +316,17 @@
     function montrer(ecran) {
       [ecranConnexion, ecranAccueil, ecranVendeurs, ecranBoutique].forEach((e) => e.classList.add("cache"));
       ecran.classList.remove("cache");
+    }
+
+    // Écran de la boutique : version propriétaire ou version vendeur
+    function appliquerModeVendeur(estVendeur) {
+      btnRetour.classList.toggle("cache", estVendeur);
+      blocFormulaireProduit.classList.toggle("cache", estVendeur);
+      btnHistorique.classList.toggle("cache", estVendeur);
+      blocResume.classList.toggle("cache", estVendeur);
+      btnDecoVendeur.classList.toggle("cache", !estVendeur);
+      infoVendeur.classList.toggle("cache", !estVendeur);
+      if (estVendeur) reinitialiserHistorique();
     }
 
     function erreurEnFrancais(code) {
@@ -350,21 +372,27 @@
     });
 
     btnDeco.addEventListener("click", () => signOut(auth));
+    btnDecoVendeur.addEventListener("click", () => signOut(auth));
+
+    // Identifiant du propriétaire des données : le vendeur travaille dans les données de son patron
+    function idProprietaire() {
+      return vendeurInfo ? vendeurInfo.proprietaireId : utilisateurActuel.uid;
+    }
 
     function dossierBoutiques() {
       return collection(db, "users", utilisateurActuel.uid, "boutiques");
     }
 
     function refBoutiqueActuelle() {
-      return doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id);
+      return doc(db, "users", idProprietaire(), "boutiques", boutiqueActuelle.id);
     }
 
     function dossierProduits() {
-      return collection(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits");
+      return collection(db, "users", idProprietaire(), "boutiques", boutiqueActuelle.id, "produits");
     }
 
     function dossierVentes() {
-      return collection(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "ventes");
+      return collection(db, "users", idProprietaire(), "boutiques", boutiqueActuelle.id, "ventes");
     }
 
     // Alerte : il reste un quart (25 %) ou moins du total reçu
@@ -830,7 +858,7 @@
       if (produitsActuels.length === 0) {
         const option = document.createElement("option");
         option.value = "";
-        option.textContent = "Ajoute d'abord un produit";
+        option.textContent = vendeurInfo ? "Aucun produit dans cette boutique" : "Ajoute d'abord un produit";
         champVenteProduit.appendChild(option);
         btnVendre.disabled = true;
         return;
@@ -890,6 +918,7 @@
     }
 
     // Dessine la liste des produits, en tenant compte de la recherche
+    // (le vendeur voit la liste sans pouvoir modifier ni supprimer)
     function dessinerListeProduits() {
       listeProduits.innerHTML = "";
       if (!instantaneProduits) return;
@@ -927,7 +956,7 @@
         detail.textContent = formaterFcfa(p.prix) + " · Stock : " + p.stock;
         info.appendChild(detail);
 
-        if (entrees.length > 0) {
+        if (!vendeurInfo && entrees.length > 0) {
           const ligneEntrees = document.createElement("small");
           ligneEntrees.textContent = entrees.length > 1
             ? "Entrées : " + entrees.join(" + ") + " = " + totalRecu
@@ -935,43 +964,47 @@
           info.appendChild(ligneEntrees);
         }
 
-        const actions = document.createElement("div");
-        actions.className = "actions";
-
-        const btnModifier = document.createElement("button");
-        btnModifier.className = "petit";
-        btnModifier.textContent = "Modifier";
-        btnModifier.addEventListener("click", () => {
-          produitEnModification = d.id;
-          champNomProduit.value = p.nom;
-          champPrix.value = p.prix;
-          champStock.value = "";
-          champStock.placeholder = "Quantité à ajouter (+)";
-          aideStock.textContent = "Stock actuel : " + p.stock + ". Écris la quantité à ajouter (laisse vide pour ne rien ajouter).";
-          aideStock.classList.remove("cache");
-          titreFormulaire.textContent = "Modifier le produit";
-          btnEnregistrerProduit.textContent = "Enregistrer les changements";
-          btnAnnuler.classList.remove("cache");
-          messageProduit.textContent = "";
-          champNomProduit.focus();
-        });
-
-        const btnSupprimer = document.createElement("button");
-        btnSupprimer.className = "petit danger";
-        btnSupprimer.textContent = "Supprimer";
-        btnSupprimer.addEventListener("click", () => {
-          if (!confirm("Supprimer le produit « " + p.nom + " » ?")) return;
-          messageProduit.textContent = "";
-          deleteDoc(doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", d.id)).catch(() => {
-            messageProduit.textContent = "Impossible de supprimer. Réessaie.";
-          });
-          if (produitEnModification === d.id) reinitialiserFormulaire();
-        });
-
-        actions.appendChild(btnModifier);
-        actions.appendChild(btnSupprimer);
         li.appendChild(info);
-        li.appendChild(actions);
+
+        if (!vendeurInfo) {
+          const actions = document.createElement("div");
+          actions.className = "actions";
+
+          const btnModifier = document.createElement("button");
+          btnModifier.className = "petit";
+          btnModifier.textContent = "Modifier";
+          btnModifier.addEventListener("click", () => {
+            produitEnModification = d.id;
+            champNomProduit.value = p.nom;
+            champPrix.value = p.prix;
+            champStock.value = "";
+            champStock.placeholder = "Quantité à ajouter (+)";
+            aideStock.textContent = "Stock actuel : " + p.stock + ". Écris la quantité à ajouter (laisse vide pour ne rien ajouter).";
+            aideStock.classList.remove("cache");
+            titreFormulaire.textContent = "Modifier le produit";
+            btnEnregistrerProduit.textContent = "Enregistrer les changements";
+            btnAnnuler.classList.remove("cache");
+            messageProduit.textContent = "";
+            champNomProduit.focus();
+          });
+
+          const btnSupprimer = document.createElement("button");
+          btnSupprimer.className = "petit danger";
+          btnSupprimer.textContent = "Supprimer";
+          btnSupprimer.addEventListener("click", () => {
+            if (!confirm("Supprimer le produit « " + p.nom + " » ?")) return;
+            messageProduit.textContent = "";
+            deleteDoc(doc(db, "users", idProprietaire(), "boutiques", boutiqueActuelle.id, "produits", d.id)).catch(() => {
+              messageProduit.textContent = "Impossible de supprimer. Réessaie.";
+            });
+            if (produitEnModification === d.id) reinitialiserFormulaire();
+          });
+
+          actions.appendChild(btnModifier);
+          actions.appendChild(btnSupprimer);
+          li.appendChild(actions);
+        }
+
         listeProduits.appendChild(li);
       });
 
@@ -999,7 +1032,7 @@
       dessinerHistorique();
     }
 
-    // Les 20 dernières ventes
+    // Les 20 dernières ventes (avec le nom du vendeur quand il y en a un)
     function dessinerListeVentes() {
       listeVentes.innerHTML = "";
       if (ventesActuelles.length === 0) {
@@ -1023,7 +1056,7 @@
             day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
           });
         }
-        detail.textContent = formaterFcfa(v.total) + " · " + quand;
+        detail.textContent = formaterFcfa(v.total) + " · " + quand + (v.vendeurNom ? " · " + v.vendeurNom : "");
         info.appendChild(titreVente);
         info.appendChild(detail);
 
@@ -1067,7 +1100,7 @@
         const detail = document.createElement("small");
         detail.textContent = formaterFcfa(v.total) + " · " + dateDeVente(v).toLocaleString("fr-FR", {
           day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit"
-        });
+        }) + (v.vendeurNom ? " · " + v.vendeurNom : "");
         info.appendChild(titreVente);
         info.appendChild(detail);
         li.appendChild(info);
@@ -1173,181 +1206,8 @@
 
       const total = p.prix * quantite;
       const restant = p.stock - quantite;
-      const refProduit = doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", idProduit);
+      const refProduit = doc(db, "users", idProprietaire(), "boutiques", boutiqueActuelle.id, "produits", idProduit);
       const refVente = doc(dossierVentes());
 
-      const lot = writeBatch(db);
-      lot.update(refProduit, { stock: increment(-quantite), modifieLe: serverTimestamp() });
-      lot.set(refVente, {
-        produitId: idProduit,
-        nom: p.nom,
-        prix: p.prix,
-        quantite: quantite,
-        total: total,
-        creeLe: serverTimestamp()
-      });
-      if (resumeActif) {
-        lot.update(refBoutiqueActuelle(), {
-          nbVentes: increment(1),
-          totalVentes: increment(total)
-        });
-      }
-      lot.commit().catch(() => {
-        messageVente.style.color = "";
-        messageVente.textContent = "Cette vente n'a pas pu être enregistrée. Vérifie la liste des ventes.";
-      });
-
-      champVenteQuantite.value = "";
-      aideQuantite.textContent = "";
-      let texte = "Vente enregistrée : " + quantite + " × " + p.nom;
-      if (q.parties.length > 1) {
-        texte += " (" + q.parties.join(" + ") + ")";
-      }
-      texte += " = " + formaterFcfa(total);
-      if (enAlerte(restant, p.stockDepart)) {
-        texte += restant === 0
-          ? " ⚠ Rupture de stock !"
-          : " ⚠ Stock bas : il ne reste que " + restant + ".";
-        messageVente.style.color = "#b9770e";
-      } else {
-        messageVente.style.color = "#1e8449";
-      }
-      if (!navigator.onLine) {
-        texte += " (sera envoyée au retour d'internet)";
-      }
-      messageVente.textContent = texte;
-    });
-
-    // Tout remettre à zéro : efface toutes les ventes (liste et résumé)
-    // Le stock et les produits ne changent pas. Demande internet.
-    btnReinitResume.addEventListener("click", async () => {
-      messageVente.style.color = "";
-      messageVente.textContent = "";
-      if (!navigator.onLine) {
-        messageVente.textContent = "Pour tout remettre à zéro, connecte-toi à internet.";
-        return;
-      }
-      if (!confirm("Effacer TOUTES les ventes (la liste et le résumé) et repartir de zéro ? Le stock et les produits ne changent pas. Cette action est définitive.")) return;
-      btnReinitResume.disabled = true;
-      try {
-        const refB = refBoutiqueActuelle();
-        const contenu = await getDocs(dossierVentes());
-        const liste = contenu.docs;
-        for (let i = 0; i < liste.length; i += 400) {
-          const lot = writeBatch(db);
-          liste.slice(i, i + 400).forEach((d) => lot.delete(d.ref));
-          await lot.commit();
-        }
-        await updateDoc(refB, {
-          nbVentes: 0,
-          totalVentes: 0,
-          resumeRemisLe: serverTimestamp()
-        });
-        messageVente.style.color = "#1e8449";
-        messageVente.textContent = "Ventes effacées : tout repart de zéro.";
-      } catch (e) {
-        messageVente.style.color = "";
-        messageVente.textContent = "Impossible de tout remettre à zéro. Vérifie ta connexion.";
-      }
-      btnReinitResume.disabled = false;
-    });
-
-    btnAnnuler.addEventListener("click", reinitialiserFormulaire);
-
-    // Ajout ou modification d'un produit (sans attendre le serveur)
-    btnEnregistrerProduit.addEventListener("click", () => {
-      messageProduit.textContent = "";
-      const nom = champNomProduit.value.trim();
-      const prix = Number(champPrix.value);
-
-      if (nom.length === 0) {
-        messageProduit.textContent = "Écris le nom du produit.";
-        return;
-      }
-      if (champPrix.value === "" || !Number.isInteger(prix) || prix < 0 || prix > 100000000) {
-        messageProduit.textContent = "Prix invalide : écris un nombre entier en FCFA.";
-        return;
-      }
-
-      if (produitEnModification) {
-        // Modification : la quantité écrite est AJOUTÉE au stock
-        const actuel = produitsActuels.find((x) => x.id === produitEnModification);
-        if (!actuel) {
-          messageProduit.textContent = "Ce produit n'existe plus.";
-          return;
-        }
-        const ajout = champStock.value === "" ? 0 : Number(champStock.value);
-        if (!Number.isInteger(ajout) || ajout < 0 || ajout > 1000000) {
-          messageProduit.textContent = "Quantité invalide : écris un nombre entier à ajouter.";
-          return;
-        }
-        const nouvellesEntrees = ajout > 0 ? actuel.entrees.concat([ajout]) : actuel.entrees;
-        updateDoc(
-          doc(db, "users", utilisateurActuel.uid, "boutiques", boutiqueActuelle.id, "produits", produitEnModification),
-          {
-            nom: nom,
-            prix: prix,
-            stock: increment(ajout),
-            stockDepart: somme(nouvellesEntrees),
-            entrees: nouvellesEntrees,
-            modifieLe: serverTimestamp()
-          }
-        ).catch(() => {
-          messageProduit.textContent = "Impossible d'enregistrer. Réessaie.";
-        });
-        reinitialiserFormulaire();
-        return;
-      }
-
-      // Nouveau produit : la quantité écrite est la première entrée
-      const stock = Number(champStock.value);
-      if (champStock.value === "" || !Number.isInteger(stock) || stock < 0 || stock > 1000000) {
-        messageProduit.textContent = "Stock invalide : écris un nombre entier.";
-        return;
-      }
-      addDoc(dossierProduits(), {
-        nom: nom,
-        prix: prix,
-        stock: stock,
-        stockDepart: stock,
-        entrees: stock > 0 ? [stock] : [],
-        creeLe: serverTimestamp()
-      }).catch(() => {
-        messageProduit.textContent = "Impossible d'enregistrer. Réessaie.";
-      });
-      reinitialiserFormulaire();
-    });
-
-    onAuthStateChanged(auth, (utilisateur) => {
-      if (arreterEcouteBoutiques) {
-        arreterEcouteBoutiques();
-        arreterEcouteBoutiques = null;
-      }
-      arreterEcouteDesVendeurs();
-      fermerBoutique();
-      boutiquesActuelles = [];
-      utilisateurActuel = utilisateur;
-      if (utilisateur) {
-        qui.textContent = "Bienvenue !";
-        montrer(ecranAccueil);
-        const requete = query(dossierBoutiques(), orderBy("creeLe"));
-        arreterEcouteBoutiques = onSnapshot(
-          requete,
-          afficherBoutiques,
-          () => { messageBoutique.textContent = "Impossible de charger tes boutiques."; }
-        );
-      } else {
-        montrer(ecranConnexion);
-        listeBoutiques.innerHTML = "";
-        listeVendeurs.innerHTML = "";
-        vueEnsemble.classList.add("cache");
-        champMdp.value = "";
-      }
-    });
-
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("./sw.js");
-    }
-  </script>
-</body>
-        </html>
+      const donneesVente = {
+        produit
