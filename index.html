@@ -1210,4 +1210,214 @@
       const refVente = doc(dossierVentes());
 
       const donneesVente = {
-        produit
+        produitId: idProduit,
+        nom: p.nom,
+        prix: p.prix,
+        quantite: quantite,
+        total: total,
+        creeLe: serverTimestamp()
+      };
+      // Le nom du vendeur est gardé sur chaque vente qu'il enregistre
+      if (vendeurInfo) {
+        donneesVente.vendeurId = utilisateurActuel.uid;
+        donneesVente.vendeurNom = vendeurInfo.nom;
+      }
+
+      const lot = writeBatch(db);
+      lot.update(refProduit, { stock: increment(-quantite), modifieLe: serverTimestamp() });
+      lot.set(refVente, donneesVente);
+      if (resumeActif) {
+        lot.update(refBoutiqueActuelle(), {
+          nbVentes: increment(1),
+          totalVentes: increment(total)
+        });
+      }
+      lot.commit().catch(() => {
+        messageVente.style.color = "";
+        messageVente.textContent = "Cette vente n'a pas pu être enregistrée. Vérifie la liste des ventes.";
+      });
+
+      champVenteQuantite.value = "";
+      aideQuantite.textContent = "";
+      let texte = "Vente enregistrée : " + quantite + " × " + p.nom;
+      if (q.parties.length > 1) {
+        texte += " (" + q.parties.join(" + ") + ")";
+      }
+      texte += " = " + formaterFcfa(total);
+      if (enAlerte(restant, p.stockDepart)) {
+        texte += restant === 0
+          ? " ⚠ Rupture de stock !"
+          : " ⚠ Stock bas : il ne reste que " + restant + ".";
+        messageVente.style.color = "#b9770e";
+      } else {
+        messageVente.style.color = "#1e8449";
+      }
+      if (!navigator.onLine) {
+        texte += " (sera envoyée au retour d'internet)";
+      }
+      messageVente.textContent = texte;
+    });
+
+    // Tout remettre à zéro : efface toutes les ventes (liste et résumé)
+    // Le stock et les produits ne changent pas. Demande internet.
+    btnReinitResume.addEventListener("click", async () => {
+      messageVente.style.color = "";
+      messageVente.textContent = "";
+      if (vendeurInfo) return;
+      if (!navigator.onLine) {
+        messageVente.textContent = "Pour tout remettre à zéro, connecte-toi à internet.";
+        return;
+      }
+      if (!confirm("Effacer TOUTES les ventes (la liste et le résumé) et repartir de zéro ? Le stock et les produits ne changent pas. Cette action est définitive.")) return;
+      btnReinitResume.disabled = true;
+      try {
+        const refB = refBoutiqueActuelle();
+        const contenu = await getDocs(dossierVentes());
+        const liste = contenu.docs;
+        for (let i = 0; i < liste.length; i += 400) {
+          const lot = writeBatch(db);
+          liste.slice(i, i + 400).forEach((d) => lot.delete(d.ref));
+          await lot.commit();
+        }
+        await updateDoc(refB, {
+          nbVentes: 0,
+          totalVentes: 0,
+          resumeRemisLe: serverTimestamp()
+        });
+        messageVente.style.color = "#1e8449";
+        messageVente.textContent = "Ventes effacées : tout repart de zéro.";
+      } catch (e) {
+        messageVente.style.color = "";
+        messageVente.textContent = "Impossible de tout remettre à zéro. Vérifie ta connexion.";
+      }
+      btnReinitResume.disabled = false;
+    });
+
+    btnAnnuler.addEventListener("click", reinitialiserFormulaire);
+
+    // Ajout ou modification d'un produit (sans attendre le serveur)
+    btnEnregistrerProduit.addEventListener("click", () => {
+      messageProduit.textContent = "";
+      if (vendeurInfo) return;
+      const nom = champNomProduit.value.trim();
+      const prix = Number(champPrix.value);
+
+      if (nom.length === 0) {
+        messageProduit.textContent = "Écris le nom du produit.";
+        return;
+      }
+      if (champPrix.value === "" || !Number.isInteger(prix) || prix < 0 || prix > 100000000) {
+        messageProduit.textContent = "Prix invalide : écris un nombre entier en FCFA.";
+        return;
+      }
+
+      if (produitEnModification) {
+        // Modification : la quantité écrite est AJOUTÉE au stock
+        const actuel = produitsActuels.find((x) => x.id === produitEnModification);
+        if (!actuel) {
+          messageProduit.textContent = "Ce produit n'existe plus.";
+          return;
+        }
+        const ajout = champStock.value === "" ? 0 : Number(champStock.value);
+        if (!Number.isInteger(ajout) || ajout < 0 || ajout > 1000000) {
+          messageProduit.textContent = "Quantité invalide : écris un nombre entier à ajouter.";
+          return;
+        }
+        const nouvellesEntrees = ajout > 0 ? actuel.entrees.concat([ajout]) : actuel.entrees;
+        updateDoc(
+          doc(db, "users", idProprietaire(), "boutiques", boutiqueActuelle.id, "produits", produitEnModification),
+          {
+            nom: nom,
+            prix: prix,
+            stock: increment(ajout),
+            stockDepart: somme(nouvellesEntrees),
+            entrees: nouvellesEntrees,
+            modifieLe: serverTimestamp()
+          }
+        ).catch(() => {
+          messageProduit.textContent = "Impossible d'enregistrer. Réessaie.";
+        });
+        reinitialiserFormulaire();
+        return;
+      }
+
+      // Nouveau produit : la quantité écrite est la première entrée
+      const stock = Number(champStock.value);
+      if (champStock.value === "" || !Number.isInteger(stock) || stock < 0 || stock > 1000000) {
+        messageProduit.textContent = "Stock invalide : écris un nombre entier.";
+        return;
+      }
+      addDoc(dossierProduits(), {
+        nom: nom,
+        prix: prix,
+        stock: stock,
+        stockDepart: stock,
+        entrees: stock > 0 ? [stock] : [],
+        creeLe: serverTimestamp()
+      }).catch(() => {
+        messageProduit.textContent = "Impossible d'enregistrer. Réessaie.";
+      });
+      reinitialiserFormulaire();
+    });
+
+    // Connexion / déconnexion : propriétaire ou vendeur ?
+    onAuthStateChanged(auth, async (utilisateur) => {
+      if (arreterEcouteBoutiques) {
+        arreterEcouteBoutiques();
+        arreterEcouteBoutiques = null;
+      }
+      arreterEcouteDesVendeurs();
+      fermerBoutique();
+      vendeurInfo = null;
+      appliquerModeVendeur(false);
+      boutiquesActuelles = [];
+      utilisateurActuel = utilisateur;
+
+      if (!utilisateur) {
+        montrer(ecranConnexion);
+        listeBoutiques.innerHTML = "";
+        listeVendeurs.innerHTML = "";
+        vueEnsemble.classList.add("cache");
+        champMdp.value = "";
+        return;
+      }
+
+      // Est-ce un vendeur ? (une fiche existe à son nom)
+      let fiche = null;
+      try {
+        const instantane = await getDoc(doc(db, "vendeurs", utilisateur.uid));
+        if (instantane.exists()) fiche = instantane.data();
+      } catch (e) {
+        fiche = null;
+      }
+      if (utilisateurActuel !== utilisateur) return;
+
+      if (fiche) {
+        vendeurInfo = {
+          proprietaireId: fiche.proprietaireId,
+          boutiqueId: fiche.boutiqueId,
+          nom: fiche.nom
+        };
+        appliquerModeVendeur(true);
+        infoVendeur.textContent = "Vendeur : " + fiche.nom;
+        ouvrirBoutique(fiche.boutiqueId, fiche.boutiqueNom || "Boutique");
+        return;
+      }
+
+      // Propriétaire
+      qui.textContent = "Bienvenue !";
+      montrer(ecranAccueil);
+      const requete = query(dossierBoutiques(), orderBy("creeLe"));
+      arreterEcouteBoutiques = onSnapshot(
+        requete,
+        afficherBoutiques,
+        () => { messageBoutique.textContent = "Impossible de charger tes boutiques."; }
+      );
+    });
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js");
+    }
+  </script>
+</body>
+        </html>
