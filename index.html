@@ -7,15 +7,15 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="logo.png">
   <link rel="apple-touch-icon" href="logo.png">
-  <title>Alkao Shop – Gestion de boutique et de stock au Togo</title>
-  <meta name="description" content="Alkao Shop : application de gestion de boutique et de stock sur téléphone. Suivi des ventes en FCFA, alertes de stock bas, employés, mode sans internet.">
+  <title>Alkao Shop – Application de gestion de boutique et de stock au Togo</title>
+  <meta name="description" content="Alkao Shop : application de gestion de boutique et de stock sur téléphone. Suivi des ventes en FCFA, ventes à crédit, alertes de stock bas, employés, mode sans internet.">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://alkao-ltd.github.io/alkao-shop/">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="fr_FR">
   <meta property="og:site_name" content="Alkao Shop">
-  <meta property="og:title" content="Alkao Shop – Gestion de boutique et de stock au Togo">
-  <meta property="og:description" content="Application de gestion de boutique et de stock sur téléphone : ventes en FCFA, alertes de stock bas, mode sans internet.">
+  <meta property="og:title" content="Alkao Shop – Application de gestion de boutique et de stock au Togo">
+  <meta property="og:description" content="Application de gestion de boutique et de stock sur téléphone : ventes en FCFA, ventes à crédit, alertes de stock bas, mode sans internet.">
   <meta property="og:url" content="https://alkao-ltd.github.io/alkao-shop/">
   <meta property="og:image" content="https://alkao-ltd.github.io/alkao-shop/logo.png">
   <meta name="twitter:card" content="summary">
@@ -29,10 +29,11 @@
     "operatingSystem": "Web, Android, iOS",
     "inLanguage": "fr",
     "url": "https://alkao-ltd.github.io/alkao-shop/",
-    "description": "Application de gestion de boutique et de stock sur téléphone : suivi des ventes en FCFA, alertes de stock bas, vendeurs, mode sans internet.",
+    "description": "Application de gestion de boutique et de stock sur téléphone : suivi des ventes en FCFA, ventes à crédit, alertes de stock bas, vendeurs, mode sans internet.",
     "featureList": [
-      "Gestion de stock sur téléphone",
+      "Application de gestion de stock sur téléphone",
       "Enregistrement des ventes",
+      "Ventes à crédit et suivi des impayés",
       "Alerte de stock bas",
       "Résumé des ventes par produit et historique par date",
       "Gestion de plusieurs boutiques",
@@ -52,6 +53,8 @@
     .carte { background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
     .cache { display: none; }
     input, select { width: 100%; padding: 12px; margin: 8px 0; font-size: 16px; border: 1px solid #bbb; border-radius: 8px; background: white; color: #222; }
+    input[type="checkbox"] { width: auto; margin: 0 10px 0 0; padding: 0; transform: scale(1.4); }
+    .case { display: flex; align-items: center; margin: 10px 0 4px 0; font-size: 16px; }
     button { width: 100%; padding: 12px; margin-top: 8px; font-size: 16px; border: none; border-radius: 8px; background: #1b6ef3; color: white; }
     button:disabled { opacity: 0.6; }
     button.lien { background: none; color: #1b6ef3; width: auto; padding: 8px 0; margin: 0 0 8px 0; }
@@ -59,13 +62,13 @@
     button.vert { background: #1e8449; }
     button.petit { width: auto; margin: 0; padding: 8px 12px; font-size: 14px; }
     button.danger { background: #c0392b; }
-    #message, #message-boutique, #message-produit, #message-vente, #message-vendeur { color: #c0392b; min-height: 20px; }
+    #message, #message-boutique, #message-produit, #message-vente, #message-vendeur, #message-impayes { color: #c0392b; min-height: 20px; }
     h3 { margin: 16px 0 4px 0; }
     ul { list-style: none; padding: 0; margin: 12px 0; }
     li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid #eee; }
     li span, .info { font-size: 16px; word-break: break-word; }
     .info small { display: block; color: #555; margin-top: 4px; font-size: 14px; }
-    .actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
     .vide { color: #777; }
     .bloc-vente { background: #eef7f0; border-radius: 10px; padding: 12px; margin-top: 8px; }
     .bloc-vente h3 { margin-top: 0; }
@@ -86,6 +89,9 @@
     .historique h3 { margin-top: 0; }
     .historique label { display: block; font-size: 14px; color: #555; margin-top: 6px; }
     #histo-total { font-weight: bold; margin: 10px 0 0 0; }
+    .impayes { background: #fff3e0; border: 1px solid #f0c27b; border-radius: 10px; padding: 12px; margin-top: 8px; }
+    .impayes h3 { margin-top: 0; }
+    #impayes-total { font-weight: bold; margin: 8px 0 0 0; }
     .presentation { margin-top: 16px; line-height: 1.5; }
     .presentation h2 { margin-top: 0; font-size: 21px; line-height: 1.3; }
     .presentation h3 { font-size: 17px; margin: 18px 0 6px 0; }
@@ -117,7 +123,7 @@
       <h2>Alkao Shop : application de gestion de boutique et de stock sur téléphone</h2>
       <p>Alkao Shop est une application de gestion de boutique pour les commerçants et les boutiquiers du Togo et d'Afrique francophone. Elle remplace le cahier de ventes : vous suivez votre stock, vous enregistrez vos ventes et vous savez à tout moment combien vous avez encaissé, en FCFA, depuis votre téléphone.</p>
 
-      <h3>Gérer le stock de votre boutique</h3>
+      <h3>Application de gestion de stock pour votre boutique</h3>
       <ul>
         <li>Enregistrez vos produits avec leur nom, leur prix et leur quantité en stock.</li>
         <li>À chaque vente, le stock baisse tout seul : fini les calculs à la main.</li>
@@ -125,9 +131,10 @@
         <li>Recevez une alerte de stock bas quand il reste un quart du stock, pour savoir quand racheter.</li>
       </ul>
 
-      <h3>Suivre vos ventes et votre argent</h3>
+      <h3>Application pour suivre vos ventes et votre argent</h3>
       <ul>
         <li>Enregistrez une vente en quelques secondes, avec la quantité vendue.</li>
+        <li>Notez les ventes à crédit : qui vous doit combien, et encaissez en un ou plusieurs paiements.</li>
         <li>Consultez le résumé de vos ventes : nombre de ventes et argent encaissé, en FCFA.</li>
         <li>Voyez vos ventes produit par produit, et l'historique par date.</li>
         <li>Gérez plusieurs boutiques dans un seul compte et voyez toutes vos boutiques d'un coup d'œil.</li>
@@ -145,9 +152,10 @@
 
       <h3>Questions fréquentes</h3>
       <p><strong>Comment gérer le stock de ma boutique avec Alkao Shop ?</strong><br>Ajoutez vos produits avec leur stock, puis enregistrez vos ventes : le stock se met à jour automatiquement, et une alerte vous prévient quand il est bas.</p>
+      <p><strong>Puis-je noter les clients qui ne paient pas tout de suite ?</strong><br>Oui. Choisissez « Vente à crédit », écrivez le nom du client, et retrouvez ensuite la liste des ventes impayées pour encaisser quand il paie.</p>
       <p><strong>Faut-il toujours avoir internet ?</strong><br>Non. Alkao Shop garde vos ventes sur votre téléphone sans connexion et les envoie dès que internet revient.</p>
       <p><strong>Mes données sont-elles privées ?</strong><br>Oui. Chaque commerçant a son propre compte, protégé par un email et un mot de passe, et ne voit que ses propres boutiques.</p>
-      <p><strong>Sur quel appareil ça marche ?</strong><br>Dans le navigateur de votre téléphone ou de votre ordinateur. Vous pouvez aussi l'ajouter à l'écran d'accueil de votre téléphone.</p>
+      <p><strong>Sur quel téléphone marche l'application ?</strong><br>Dans le navigateur de votre téléphone ou de votre ordinateur. Vous pouvez aussi l'ajouter à l'écran d'accueil de votre téléphone.</p>
       <p><strong>Comment commencer ?</strong><br>Appuyez sur « Créer un compte » en haut de la page, avec votre email et un mot de passe.</p>
 
       <h3>Une question ? Écrivez-nous</h3>
@@ -203,8 +211,21 @@
         <input id="vente-quantite" type="text" inputmode="tel" autocomplete="off" placeholder="Quantité vendue (ex. 3 ou 3+15)">
         <p id="aide-quantite"></p>
         <button id="btn-plus" type="button" class="gris">+ Ajouter une autre quantité</button>
+        <label class="case"><input id="vente-credit" type="checkbox"> Vente à crédit (le client n'a pas encore payé)</label>
+        <div id="bloc-credit" class="cache">
+          <input id="vente-client" type="text" placeholder="Nom du client" maxlength="60" autocomplete="off">
+          <input id="vente-tel" type="tel" placeholder="Téléphone du client (facultatif)" maxlength="20" autocomplete="off">
+        </div>
         <button id="btn-vendre" class="vert">Enregistrer la vente</button>
         <p id="message-vente"></p>
+      </div>
+
+      <button id="btn-impayes" class="gris">Ventes impayées</button>
+      <div id="bloc-impayes" class="impayes cache">
+        <h3>Ventes impayées</h3>
+        <p id="impayes-total"></p>
+        <p id="message-impayes"></p>
+        <ul id="liste-impayes"></ul>
       </div>
 
       <div id="bloc-formulaire-produit">
@@ -354,8 +375,17 @@
     const champVenteQuantite = document.getElementById("vente-quantite");
     const aideQuantite = document.getElementById("aide-quantite");
     const btnPlus = document.getElementById("btn-plus");
+    const caseCredit = document.getElementById("vente-credit");
+    const blocCredit = document.getElementById("bloc-credit");
+    const champClient = document.getElementById("vente-client");
+    const champTel = document.getElementById("vente-tel");
     const btnVendre = document.getElementById("btn-vendre");
     const messageVente = document.getElementById("message-vente");
+    const btnImpayes = document.getElementById("btn-impayes");
+    const blocImpayes = document.getElementById("bloc-impayes");
+    const impayesTotal = document.getElementById("impayes-total");
+    const messageImpayes = document.getElementById("message-impayes");
+    const listeImpayes = document.getElementById("liste-impayes");
     const listeVentes = document.getElementById("liste-ventes");
     const btnHistorique = document.getElementById("btn-historique");
     const blocHistorique = document.getElementById("bloc-historique");
@@ -387,6 +417,7 @@
     let instantaneProduits = null;
     let ventesActuelles = [];
     let historiqueOuvert = false;
+    let impayesOuverts = false;
 
     // Bandeau « Hors connexion »
     function majConnexion() {
@@ -408,10 +439,14 @@
       btnRetour.classList.toggle("cache", estVendeur);
       blocFormulaireProduit.classList.toggle("cache", estVendeur);
       btnHistorique.classList.toggle("cache", estVendeur);
+      btnImpayes.classList.toggle("cache", estVendeur);
       blocResume.classList.toggle("cache", estVendeur);
       btnDecoVendeur.classList.toggle("cache", !estVendeur);
       infoVendeur.classList.toggle("cache", !estVendeur);
-      if (estVendeur) reinitialiserHistorique();
+      if (estVendeur) {
+        reinitialiserHistorique();
+        reinitialiserImpayes();
+      }
     }
 
     function erreurEnFrancais(code) {
@@ -480,6 +515,10 @@
       return collection(db, "users", idProprietaire(), "boutiques", boutiqueActuelle.id, "ventes");
     }
 
+    function refVente(idVente) {
+      return doc(db, "users", idProprietaire(), "boutiques", boutiqueActuelle.id, "ventes", idVente);
+    }
+
     // Alerte : il reste un quart (25 %) ou moins du total reçu
     function enAlerte(stock, stockDepart) {
       return Number.isInteger(stockDepart) && stockDepart > 0 && stock <= stockDepart * 0.25;
@@ -501,6 +540,11 @@
       if (Array.isArray(p.entrees) && p.entrees.length > 0) return p.entrees;
       if (Number.isInteger(p.stockDepart) && p.stockDepart > 0) return [p.stockDepart];
       return p.stock > 0 ? [p.stock] : [];
+    }
+
+    // Une vente à crédit dont il reste de l'argent à recevoir
+    function estImpayee(v) {
+      return v.credit === true && Number(v.reste) > 0;
     }
 
     // Ajout d'une boutique (sans attendre le serveur : marche hors connexion)
@@ -798,6 +842,10 @@
     function reinitialiserVente() {
       champVenteQuantite.value = "";
       aideQuantite.textContent = "";
+      caseCredit.checked = false;
+      blocCredit.classList.add("cache");
+      champClient.value = "";
+      champTel.value = "";
       messageVente.textContent = "";
       messageVente.style.color = "";
     }
@@ -819,6 +867,16 @@
       listeHistorique.innerHTML = "";
     }
 
+    // Ferme la liste des ventes impayées
+    function reinitialiserImpayes() {
+      impayesOuverts = false;
+      blocImpayes.classList.add("cache");
+      btnImpayes.textContent = "Ventes impayées";
+      impayesTotal.textContent = "";
+      messageImpayes.textContent = "";
+      listeImpayes.innerHTML = "";
+    }
+
     // Affiche le résumé cumulé de la boutique
     function afficherResume(instantane) {
       if (!instantane.exists()) return;
@@ -837,6 +895,7 @@
       resumeTotal.textContent = "Argent encaissé : " + formaterFcfa(b.totalVentes);
     }
 
+    // L'argent encaissé compte les ventes payées et les paiements déjà reçus sur les ventes à crédit
     async function calculerResumeDepuisVentes() {
       try {
         const refB = refBoutiqueActuelle();
@@ -844,8 +903,9 @@
         let nb = 0;
         let total = 0;
         contenu.forEach((d) => {
+          const v = d.data();
           nb += 1;
-          total += Number(d.data().total) || 0;
+          total += v.credit === true ? (Number(v.paye) || 0) : (Number(v.total) || 0);
         });
         await updateDoc(refB, { nbVentes: nb, totalVentes: total });
       } catch (e) {
@@ -862,6 +922,7 @@
       reinitialiserVente();
       reinitialiserAffichageResume();
       reinitialiserHistorique();
+      reinitialiserImpayes();
       champRecherche.value = "";
       instantaneProduits = null;
       ventesActuelles = [];
@@ -921,6 +982,7 @@
       reinitialiserVente();
       reinitialiserAffichageResume();
       reinitialiserHistorique();
+      reinitialiserImpayes();
       listeProduits.innerHTML = "";
       listeVentes.innerHTML = "";
       champVenteProduit.innerHTML = "";
@@ -1109,12 +1171,19 @@
       return v.creeLe && v.creeLe.toDate ? v.creeLe.toDate() : new Date();
     }
 
-    // Reçoit toutes les ventes, puis dessine la liste, le résumé et l'historique
+    // Texte ajouté à une vente à crédit dans les listes
+    function texteCredit(v) {
+      if (v.credit !== true) return "";
+      return " · crédit : " + (v.client || "client") + (Number(v.reste) > 0 ? " (reste " + formaterFcfa(v.reste) + ")" : "");
+    }
+
+    // Reçoit toutes les ventes, puis dessine les listes, le résumé et l'historique
     function afficherVentes(instantane) {
-      ventesActuelles = instantane.docs.map((d) => d.data());
+      ventesActuelles = instantane.docs.map((d) => ({ id: d.id, ...d.data() }));
       dessinerListeVentes();
       dessinerResumeProduits();
       dessinerHistorique();
+      dessinerImpayes();
     }
 
     // Les 20 dernières ventes (avec le nom du vendeur quand il y en a un)
@@ -1141,12 +1210,136 @@
             day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
           });
         }
-        detail.textContent = formaterFcfa(v.total) + " · " + quand + (v.vendeurNom ? " · " + v.vendeurNom : "");
+        detail.textContent = formaterFcfa(v.total) + " · " + quand + (v.vendeurNom ? " · " + v.vendeurNom : "") + texteCredit(v);
         info.appendChild(titreVente);
         info.appendChild(detail);
 
         li.appendChild(info);
         listeVentes.appendChild(li);
+      });
+    }
+
+    // ----- Ventes impayées (ventes à crédit) -----
+
+    // Montre ou cache la liste, et met à jour le texte du bouton
+    function dessinerImpayes() {
+      listeImpayes.innerHTML = "";
+      const dettes = ventesActuelles.filter(estImpayee).reverse();
+      const totalReste = dettes.reduce((a, v) => a + Number(v.reste), 0);
+
+      let texteBouton = impayesOuverts ? "Masquer les ventes impayées" : "Ventes impayées";
+      if (dettes.length > 0) {
+        texteBouton += " (" + dettes.length + " · " + formaterFcfa(totalReste) + ")";
+      }
+      btnImpayes.textContent = texteBouton;
+      impayesTotal.textContent = dettes.length > 0
+        ? "Total à recevoir : " + formaterFcfa(totalReste) + " (" + dettes.length + (dettes.length > 1 ? " ventes" : " vente") + ")"
+        : "";
+
+      if (!impayesOuverts) return;
+
+      if (dettes.length === 0) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucune vente impayée.";
+        listeImpayes.appendChild(vide);
+        return;
+      }
+
+      dettes.forEach((v) => {
+        const li = document.createElement("li");
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const client = document.createElement("strong");
+        client.textContent = (v.client || "Client") + (v.clientTel ? " · " + v.clientTel : "");
+        const ligneProduit = document.createElement("small");
+        ligneProduit.textContent = v.quantite + " × " + v.nom + " · total " + formaterFcfa(v.total);
+        const ligneReste = document.createElement("small");
+        ligneReste.textContent = "Déjà payé : " + formaterFcfa(Number(v.paye) || 0) + " · Reste : " + formaterFcfa(v.reste);
+        const ligneDate = document.createElement("small");
+        ligneDate.textContent = dateDeVente(v).toLocaleString("fr-FR", {
+          day: "2-digit", month: "2-digit", year: "numeric"
+        }) + (v.vendeurNom ? " · " + v.vendeurNom : "");
+        info.appendChild(client);
+        info.appendChild(ligneProduit);
+        info.appendChild(ligneReste);
+        info.appendChild(ligneDate);
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const btnEncaisser = document.createElement("button");
+        btnEncaisser.className = "petit vert";
+        btnEncaisser.textContent = "Encaisser";
+        btnEncaisser.addEventListener("click", () => encaisserDette(v));
+
+        const btnEffacer = document.createElement("button");
+        btnEffacer.className = "petit danger";
+        btnEffacer.textContent = "Effacer";
+        btnEffacer.addEventListener("click", () => effacerDette(v));
+
+        actions.appendChild(btnEncaisser);
+        actions.appendChild(btnEffacer);
+        li.appendChild(info);
+        li.appendChild(actions);
+        listeImpayes.appendChild(li);
+      });
+    }
+
+    btnImpayes.addEventListener("click", () => {
+      if (vendeurInfo) return;
+      impayesOuverts = !impayesOuverts;
+      blocImpayes.classList.toggle("cache", !impayesOuverts);
+      messageImpayes.textContent = "";
+      dessinerImpayes();
+    });
+
+    // Le client paie une partie ou la totalité de ce qu'il doit
+    function encaisserDette(v) {
+      if (vendeurInfo) return;
+      messageImpayes.style.color = "";
+      messageImpayes.textContent = "";
+      const reste = Number(v.reste);
+      const saisie = prompt(
+        "Combien « " + (v.client || "le client") + " » paie-t-il maintenant ? (reste à payer : " + formaterFcfa(reste) + ")",
+        String(reste)
+      );
+      if (saisie === null) return;
+      const montant = Number(String(saisie).replace(/\s/g, ""));
+      if (!Number.isInteger(montant) || montant < 1 || montant > reste) {
+        messageImpayes.textContent = "Montant invalide : écris un nombre entier entre 1 et " + reste + ".";
+        return;
+      }
+
+      const lot = writeBatch(db);
+      lot.update(refVente(v.id), {
+        paye: increment(montant),
+        reste: increment(-montant),
+        dernierPaiement: serverTimestamp()
+      });
+      if (resumeActif) {
+        lot.update(refBoutiqueActuelle(), { totalVentes: increment(montant) });
+      }
+      lot.commit().catch(() => {
+        messageImpayes.style.color = "";
+        messageImpayes.textContent = "Le paiement n'a pas pu être enregistré. Réessaie.";
+      });
+
+      messageImpayes.style.color = "#1e8449";
+      messageImpayes.textContent = montant === reste
+        ? "Dette soldée : " + (v.client || "le client") + " a tout payé (" + formaterFcfa(montant) + ")."
+        : "Paiement enregistré : " + formaterFcfa(montant) + ". Il reste " + formaterFcfa(reste - montant) + ".";
+    }
+
+    // On abandonne la dette : l'argent n'est pas compté dans les encaissements
+    function effacerDette(v) {
+      if (vendeurInfo) return;
+      messageImpayes.style.color = "";
+      messageImpayes.textContent = "";
+      if (!confirm("Effacer la dette de « " + (v.client || "ce client") + " » (reste " + formaterFcfa(v.reste) + ") ? L'argent ne sera pas compté dans tes encaissements.")) return;
+      updateDoc(refVente(v.id), { reste: 0, abandonne: true }).catch(() => {
+        messageImpayes.textContent = "Impossible d'effacer la dette. Réessaie.";
       });
     }
 
@@ -1185,7 +1378,7 @@
         const detail = document.createElement("small");
         detail.textContent = formaterFcfa(v.total) + " · " + dateDeVente(v).toLocaleString("fr-FR", {
           day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit"
-        }) + (v.vendeurNom ? " · " + v.vendeurNom : "");
+        }) + (v.vendeurNom ? " · " + v.vendeurNom : "") + texteCredit(v);
         info.appendChild(titreVente);
         info.appendChild(detail);
         li.appendChild(info);
@@ -1216,7 +1409,7 @@
       dessinerHistorique();
     });
 
-    // Résumé par produit : nombre vendu et argent encaissé pour chaque produit
+    // Résumé par produit : nombre vendu et valeur des ventes pour chaque produit
     function dessinerResumeProduits() {
       resumeProduits.innerHTML = "";
       if (ventesActuelles.length === 0) return;
@@ -1262,6 +1455,12 @@
       champVenteQuantite.focus();
     });
 
+    // Case « Vente à crédit » : montre ou cache les champs du client
+    caseCredit.addEventListener("change", () => {
+      blocCredit.classList.toggle("cache", !caseCredit.checked);
+      if (caseCredit.checked) champClient.focus();
+    });
+
     // Enregistrement d'une vente (sans attendre le serveur : marche hors connexion)
     btnVendre.addEventListener("click", () => {
       messageVente.style.color = "";
@@ -1269,6 +1468,9 @@
       const idProduit = champVenteProduit.value;
       const q = lireQuantites();
       const quantite = q.total;
+      const credit = caseCredit.checked;
+      const client = champClient.value.trim();
+      const clientTel = champTel.value.trim();
 
       if (!idProduit) {
         messageVente.textContent = "Choisis un produit.";
@@ -1276,6 +1478,10 @@
       }
       if (!q.valide || quantite < 1 || quantite > 1000000) {
         messageVente.textContent = "Quantité invalide : écris un nombre entier (ex. 3 ou 3+15).";
+        return;
+      }
+      if (credit && client.length === 0) {
+        messageVente.textContent = "Écris le nom du client pour une vente à crédit.";
         return;
       }
 
@@ -1292,7 +1498,7 @@
       const total = p.prix * quantite;
       const restant = p.stock - quantite;
       const refProduit = doc(db, "users", idProprietaire(), "boutiques", boutiqueActuelle.id, "produits", idProduit);
-      const refVente = doc(dossierVentes());
+      const refNouvelleVente = doc(dossierVentes());
 
       const donneesVente = {
         produitId: idProduit,
@@ -1302,6 +1508,14 @@
         total: total,
         creeLe: serverTimestamp()
       };
+      // Vente à crédit : le client n'a pas encore payé
+      if (credit) {
+        donneesVente.credit = true;
+        donneesVente.client = client;
+        if (clientTel) donneesVente.clientTel = clientTel;
+        donneesVente.paye = 0;
+        donneesVente.reste = total;
+      }
       // Le nom du vendeur est gardé sur chaque vente qu'il enregistre
       if (vendeurInfo) {
         donneesVente.vendeurId = utilisateurActuel.uid;
@@ -1310,11 +1524,12 @@
 
       const lot = writeBatch(db);
       lot.update(refProduit, { stock: increment(-quantite), modifieLe: serverTimestamp() });
-      lot.set(refVente, donneesVente);
+      lot.set(refNouvelleVente, donneesVente);
       if (resumeActif) {
+        // À crédit : la vente compte, mais l'argent n'est encaissé qu'au paiement
         lot.update(refBoutiqueActuelle(), {
           nbVentes: increment(1),
-          totalVentes: increment(total)
+          totalVentes: increment(credit ? 0 : total)
         });
       }
       lot.commit().catch(() => {
@@ -1324,11 +1539,18 @@
 
       champVenteQuantite.value = "";
       aideQuantite.textContent = "";
-      let texte = "Vente enregistrée : " + quantite + " × " + p.nom;
+      caseCredit.checked = false;
+      blocCredit.classList.add("cache");
+      champClient.value = "";
+      champTel.value = "";
+      let texte = (credit ? "Vente à crédit enregistrée : " : "Vente enregistrée : ") + quantite + " × " + p.nom;
       if (q.parties.length > 1) {
         texte += " (" + q.parties.join(" + ") + ")";
       }
       texte += " = " + formaterFcfa(total);
+      if (credit) {
+        texte += " (à payer par " + client + ")";
+      }
       if (enAlerte(restant, p.stockDepart)) {
         texte += restant === 0
           ? " ⚠ Rupture de stock !"
@@ -1343,8 +1565,8 @@
       messageVente.textContent = texte;
     });
 
-    // Tout remettre à zéro : efface toutes les ventes (liste et résumé)
-    // Le stock et les produits ne changent pas. Demande internet.
+    // Tout remettre à zéro : efface les ventes payées (liste et résumé)
+    // Les ventes impayées sont gardées. Le stock et les produits ne changent pas. Demande internet.
     btnReinitResume.addEventListener("click", async () => {
       messageVente.style.color = "";
       messageVente.textContent = "";
@@ -1353,24 +1575,35 @@
         messageVente.textContent = "Pour tout remettre à zéro, connecte-toi à internet.";
         return;
       }
-      if (!confirm("Effacer TOUTES les ventes (la liste et le résumé) et repartir de zéro ? Le stock et les produits ne changent pas. Cette action est définitive.")) return;
+      if (!confirm("Effacer toutes les ventes payées (la liste et le résumé) et repartir de zéro ? Les ventes impayées sont gardées. Le stock et les produits ne changent pas. Cette action est définitive.")) return;
       btnReinitResume.disabled = true;
       try {
         const refB = refBoutiqueActuelle();
         const contenu = await getDocs(dossierVentes());
-        const liste = contenu.docs;
-        for (let i = 0; i < liste.length; i += 400) {
+        const aSupprimer = [];
+        const aGarder = [];
+        contenu.docs.forEach((d) => {
+          if (estImpayee(d.data())) {
+            aGarder.push(d.data());
+          } else {
+            aSupprimer.push(d);
+          }
+        });
+        for (let i = 0; i < aSupprimer.length; i += 400) {
           const lot = writeBatch(db);
-          liste.slice(i, i + 400).forEach((d) => lot.delete(d.ref));
+          aSupprimer.slice(i, i + 400).forEach((d) => lot.delete(d.ref));
           await lot.commit();
         }
+        const dejaPaye = aGarder.reduce((a, v) => a + (Number(v.paye) || 0), 0);
         await updateDoc(refB, {
-          nbVentes: 0,
-          totalVentes: 0,
+          nbVentes: aGarder.length,
+          totalVentes: dejaPaye,
           resumeRemisLe: serverTimestamp()
         });
         messageVente.style.color = "#1e8449";
-        messageVente.textContent = "Ventes effacées : tout repart de zéro.";
+        messageVente.textContent = aGarder.length > 0
+          ? "Ventes payées effacées. " + aGarder.length + (aGarder.length > 1 ? " ventes impayées sont gardées." : " vente impayée est gardée.")
+          : "Ventes effacées : tout repart de zéro.";
       } catch (e) {
         messageVente.style.color = "";
         messageVente.textContent = "Impossible de tout remettre à zéro. Vérifie ta connexion.";
