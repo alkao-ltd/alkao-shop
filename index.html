@@ -7,15 +7,15 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" href="logo.png">
   <link rel="apple-touch-icon" href="logo.png">
-  <title>Alkao Shop – Application de gestion de boutique et de stock au Togo</title>
-  <meta name="description" content="Alkao Shop : application de gestion de boutique et de stock sur téléphone. Suivi des ventes en FCFA, ventes à crédit, alertes de stock bas, employés, mode sans internet.">
+  <title>Alkao Shop – Application de gestion de boutique et de stock (FCFA)</title>
+  <meta name="description" content="Alkao Shop : application de gestion de boutique et de stock sur téléphone, en Afrique francophone. Ventes en FCFA, crédit, alertes de stock, sans internet.">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://alkao-ltd.github.io/alkao-shop/">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="fr_FR">
   <meta property="og:site_name" content="Alkao Shop">
-  <meta property="og:title" content="Alkao Shop – Application de gestion de boutique et de stock au Togo">
-  <meta property="og:description" content="Application de gestion de boutique et de stock sur téléphone : ventes en FCFA, ventes à crédit, alertes de stock bas, mode sans internet.">
+  <meta property="og:title" content="Alkao Shop – Application de gestion de boutique et de stock (FCFA)">
+  <meta property="og:description" content="Application de gestion de boutique et de stock sur téléphone pour l'Afrique francophone : ventes en FCFA, crédit, alertes de stock bas, mode sans internet.">
   <meta property="og:url" content="https://alkao-ltd.github.io/alkao-shop/">
   <meta property="og:image" content="https://alkao-ltd.github.io/alkao-shop/logo.png">
   <meta name="twitter:card" content="summary">
@@ -29,6 +29,7 @@
     "operatingSystem": "Web, Android, iOS",
     "inLanguage": "fr",
     "url": "https://alkao-ltd.github.io/alkao-shop/",
+    "areaServed": ["Togo", "Bénin", "Burkina Faso", "Mali", "Côte d'Ivoire", "Sénégal", "Niger", "Guinée-Bissau"],
     "description": "Application de gestion de boutique et de stock sur téléphone : suivi des ventes en FCFA, ventes à crédit, alertes de stock bas, vendeurs, mode sans internet.",
     "featureList": [
       "Application de gestion de stock sur téléphone",
@@ -62,7 +63,7 @@
     button.vert { background: #1e8449; }
     button.petit { width: auto; margin: 0; padding: 8px 12px; font-size: 14px; }
     button.danger { background: #c0392b; }
-    #message, #message-boutique, #message-produit, #message-vente, #message-vendeur, #message-impayes { color: #c0392b; min-height: 20px; }
+    #message, #message-boutique, #message-produit, #message-vente, #message-vendeur, #message-impayes, #message-lien, #message-lien-vendeurs { color: #c0392b; min-height: 20px; }
     h3 { margin: 16px 0 4px 0; }
     ul { list-style: none; padding: 0; margin: 12px 0; }
     li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid #eee; }
@@ -121,7 +122,7 @@
 
     <section id="presentation" class="carte presentation">
       <h2>Alkao Shop : application de gestion de boutique et de stock sur téléphone</h2>
-      <p>Alkao Shop est une application de gestion de boutique pour les commerçants et les boutiquiers du Togo et d'Afrique francophone. Elle remplace le cahier de ventes : vous suivez votre stock, vous enregistrez vos ventes et vous savez à tout moment combien vous avez encaissé, en FCFA, depuis votre téléphone.</p>
+      <p>Alkao Shop est une application de gestion de boutique pour les commerçants et les boutiquiers d'Afrique francophone : au Togo, au Bénin, au Burkina Faso, au Mali, en Côte d'Ivoire, au Sénégal, au Niger et en Guinée-Bissau (zone UEMOA). Elle remplace le cahier de ventes : vous suivez votre stock, vous enregistrez vos ventes et vous savez à tout moment combien vous avez encaissé, en FCFA, depuis votre téléphone.</p>
 
       <h3>Application de gestion de stock pour votre boutique</h3>
       <ul>
@@ -145,12 +146,13 @@
       <p>Pas de connexion ? Continuez à vendre. Alkao Shop garde vos ventes sur votre téléphone et les envoie dès que internet revient.</p>
 
       <h3>Pour qui ?</h3>
-      <p>Pour les boutiques de quartier et les grands magasins, à Lomé et partout au Togo : vendeurs de boissons, de vêtements, de produits de beauté ou de provisions. Toute personne qui vend des produits et veut mieux suivre son stock et son argent.</p>
+      <p>Pour les boutiques de quartier et les grands magasins, à Lomé, Cotonou, Ouagadougou, Bamako, Abidjan, Dakar, Niamey et partout en Afrique de l'Ouest : vendeurs de boissons, de vêtements, de produits de beauté ou de provisions. Toute personne qui vend des produits et veut mieux suivre son stock et son argent.</p>
 
       <h3>Pourquoi remplacer le cahier de ventes ?</h3>
       <p>Un cahier peut se perdre, se mouiller ou contenir des erreurs de calcul. Avec une application de gestion de stock sur téléphone, vos chiffres sont gardés en ligne et protégés par votre compte. Vous les retrouvez même si vous changez de téléphone.</p>
 
       <h3>Questions fréquentes</h3>
+      <p><strong>Dans quels pays peut-on utiliser Alkao Shop ?</strong><br>Partout où l'on vend en FCFA : Togo, Bénin, Burkina Faso, Mali, Côte d'Ivoire, Sénégal, Niger, Guinée-Bissau, et plus largement en Afrique francophone. Il suffit d'un téléphone avec internet pour créer son compte.</p>
       <p><strong>Comment gérer le stock de ma boutique avec Alkao Shop ?</strong><br>Ajoutez vos produits avec leur stock, puis enregistrez vos ventes : le stock se met à jour automatiquement, et une alerte vous prévient quand il est bas.</p>
       <p><strong>Puis-je noter les clients qui ne paient pas tout de suite ?</strong><br>Oui. Choisissez « Vente à crédit », écrivez le nom du client, et retrouvez ensuite la liste des ventes impayées pour encaisser quand il paie.</p>
       <p><strong>Faut-il toujours avoir internet ?</strong><br>Non. Alkao Shop garde vos ventes sur votre téléphone sans connexion et les envoie dès que internet revient.</p>
@@ -176,6 +178,8 @@
       </div>
 
       <button id="btn-mes-vendeurs" class="gris">Mes vendeurs (employés)</button>
+      <button id="btn-copier-lien" class="gris">Copier le lien de l'application</button>
+      <p id="message-lien"></p>
 
       <input id="nom-boutique" type="text" placeholder="Nom de la boutique" maxlength="60">
       <button id="btn-ajouter">Ajouter la boutique</button>
@@ -188,6 +192,8 @@
       <button id="btn-retour-vendeurs" class="lien">← Mes boutiques</button>
       <h2>Mes vendeurs</h2>
       <p class="astuce">Crée un accès pour un employé. Il pourra seulement enregistrer des ventes dans la boutique que tu choisis. Note bien son mot de passe : il n'est pas gardé.</p>
+      <button id="btn-copier-lien-vendeurs" class="gris">Copier le lien de l'application</button>
+      <p id="message-lien-vendeurs"></p>
       <input id="vendeur-nom" type="text" placeholder="Nom du vendeur" maxlength="60" autocomplete="off">
       <input id="vendeur-email" type="email" placeholder="Email du vendeur" autocomplete="off">
       <input id="vendeur-mdp" type="text" placeholder="Mot de passe (6 caractères minimum)" autocomplete="off">
@@ -310,6 +316,9 @@
       appId: "1:170951024988:web:ff001f15fd2b0924ca6199"
     };
 
+    // Adresse de l'application, à envoyer aux commerçants et aux employés
+    const LIEN_APPLICATION = "https://alkao-ltd.github.io/alkao-shop/";
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
@@ -344,6 +353,10 @@
     const ensembleArgent = document.getElementById("ensemble-argent");
     const ensembleNote = document.getElementById("ensemble-note");
     const btnMesVendeurs = document.getElementById("btn-mes-vendeurs");
+    const btnCopierLien = document.getElementById("btn-copier-lien");
+    const messageLien = document.getElementById("message-lien");
+    const btnCopierLienVendeurs = document.getElementById("btn-copier-lien-vendeurs");
+    const messageLienVendeurs = document.getElementById("message-lien-vendeurs");
     const champNomBoutique = document.getElementById("nom-boutique");
     const btnAjouter = document.getElementById("btn-ajouter");
     const messageBoutique = document.getElementById("message-boutique");
@@ -433,6 +446,52 @@
       ecran.classList.remove("cache");
       presentation.classList.toggle("cache", ecran !== ecranConnexion);
     }
+
+    // ----- Copier le lien de l'application -----
+
+    // Copie un texte dans le presse-papiers ; renvoie vrai si ça a marché
+    async function copierTexte(texte) {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(texte);
+          return true;
+        }
+      } catch (e) {
+        /* on essaie l'autre méthode */
+      }
+      try {
+        const zone = document.createElement("textarea");
+        zone.value = texte;
+        zone.setAttribute("readonly", "");
+        zone.style.position = "fixed";
+        zone.style.top = "0";
+        zone.style.opacity = "0";
+        document.body.appendChild(zone);
+        zone.focus();
+        zone.select();
+        zone.setSelectionRange(0, texte.length);
+        const ok = document.execCommand("copy");
+        document.body.removeChild(zone);
+        return ok;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    async function copierLienApplication(elementMessage) {
+      elementMessage.style.color = "";
+      elementMessage.textContent = "";
+      const ok = await copierTexte(LIEN_APPLICATION);
+      if (ok) {
+        elementMessage.style.color = "#1e8449";
+        elementMessage.textContent = "Lien copié ! Colle-le dans WhatsApp ou dans un message.";
+      } else {
+        elementMessage.textContent = "Impossible de copier. Le lien est : " + LIEN_APPLICATION;
+      }
+    }
+
+    btnCopierLien.addEventListener("click", () => copierLienApplication(messageLien));
+    btnCopierLienVendeurs.addEventListener("click", () => copierLienApplication(messageLienVendeurs));
 
     // Écran de la boutique : version propriétaire ou version vendeur
     function appliquerModeVendeur(estVendeur) {
@@ -693,6 +752,7 @@
     function ouvrirEcranVendeurs() {
       messageVendeur.style.color = "";
       messageVendeur.textContent = "";
+      messageLienVendeurs.textContent = "";
       remplirChoixBoutiquesVendeur();
       listeVendeurs.innerHTML = "";
       montrer(ecranVendeurs);
@@ -1690,6 +1750,7 @@
       appliquerModeVendeur(false);
       boutiquesActuelles = [];
       utilisateurActuel = utilisateur;
+      messageLien.textContent = "";
 
       if (!utilisateur) {
         montrer(ecranConnexion);
