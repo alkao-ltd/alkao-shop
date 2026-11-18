@@ -133,7 +133,7 @@
       <h3>Application de gestion de stock pour votre boutique</h3>
       <ul>
         <li>Enregistrez vos produits avec leur nom, leur prix et leur quantité en stock.</li>
-        <li>Dictez un prix ou une quantité à la voix, sans taper (avec internet).</li>
+        <li>Dictez un prix, un stock ou une quantité vendue à la voix, sans taper (avec internet).</li>
         <li>À chaque vente, le stock baisse tout seul : fini les calculs à la main.</li>
         <li>Ajoutez du stock quand vous recevez de la marchandise : l'application garde chaque entrée.</li>
         <li>Recevez une alerte de stock bas quand il reste un quart du stock, pour savoir quand racheter.</li>
@@ -221,7 +221,11 @@
       <div class="bloc-vente">
         <h3>Enregistrer une vente</h3>
         <select id="vente-produit"></select>
-        <input id="vente-quantite" type="text" inputmode="tel" autocomplete="off" placeholder="Quantité vendue (ex. 3 ou 3+15)">
+        <div class="champ-vocal">
+          <input id="vente-quantite" type="text" inputmode="tel" autocomplete="off" placeholder="Quantité vendue (ex. 3 ou 3+15)">
+          <button id="btn-voix-vente" type="button" class="micro" aria-label="Dicter la quantité vendue à la voix">🎤</button>
+        </div>
+        <p id="message-voix-vente" class="voix astuce"></p>
         <p id="aide-quantite"></p>
         <button id="btn-plus" type="button" class="gris">+ Ajouter une autre quantité</button>
         <label class="case"><input id="vente-credit" type="checkbox"> Vente à crédit (le client n'a pas encore payé)</label>
@@ -405,6 +409,8 @@
     const listeProduits = document.getElementById("liste-produits");
     const champVenteProduit = document.getElementById("vente-produit");
     const champVenteQuantite = document.getElementById("vente-quantite");
+    const btnVoixVente = document.getElementById("btn-voix-vente");
+    const messageVoixVente = document.getElementById("message-voix-vente");
     const aideQuantite = document.getElementById("aide-quantite");
     const btnPlus = document.getElementById("btn-plus");
     const caseCredit = document.getElementById("vente-credit");
@@ -513,7 +519,7 @@
     btnCopierLien.addEventListener("click", () => copierLienApplication(messageLien));
     btnCopierLienVendeurs.addEventListener("click", () => copierLienApplication(messageLienVendeurs));
 
-    // ----- Dictée vocale des nombres (prix, quantité en stock) -----
+    // ----- Dictée vocale (prix, quantité en stock, quantité vendue) -----
 
     const Reconnaissance = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -559,6 +565,32 @@
       return nombre <= 100000000 ? nombre : null;
     }
 
+    // Un seul nombre (prix ou stock) : renvoie la valeur à écrire et le texte à afficher
+    function analyseurNombre(formater) {
+      return (texte) => {
+        const n = texteVersNombre(texte);
+        return n === null ? null : { valeur: String(n), affichage: formater(n) };
+      };
+    }
+
+    // Quantité vendue : un nombre, ou plusieurs séparés par « plus » (ex. « trois plus quinze » devient 3+15)
+    function texteVersQuantites(texte) {
+      const morceaux = String(texte || "").toLowerCase().split(/\s*\+\s*|\s+plus\s+/);
+      const nombres = [];
+      for (const morceau of morceaux) {
+        const n = texteVersNombre(morceau);
+        if (n === null || n < 1 || n > 1000000) return null;
+        nombres.push(n);
+      }
+      if (nombres.length === 0) return null;
+      const total = nombres.reduce((a, b) => a + b, 0);
+      if (total > 1000000) return null;
+      return {
+        valeur: nombres.join("+"),
+        affichage: nombres.length > 1 ? nombres.join(" + ") + " = " + total : String(total)
+      };
+    }
+
     function arreterDictee() {
       if (reconnaissanceEnCours) {
         try { reconnaissanceEnCours.abort(); } catch (e) { /* rien */ }
@@ -566,8 +598,9 @@
       }
     }
 
-    // Écoute la voix et écrit le nombre compris dans la case
-    function dicterNombre(champ, bouton, elementMessage, consigne, formater) {
+    // Écoute la voix et écrit ce qui est compris dans la case
+    // ajouterApresPlus : si la case se termine par « + », on ajoute à la suite au lieu de remplacer
+    function dicterNombre(champ, bouton, elementMessage, consigne, analyser, ajouterApresPlus) {
       elementMessage.style.color = "";
       elementMessage.textContent = "";
 
@@ -603,14 +636,15 @@
         const alternatives = evenement.results[0];
         let premierTexte = "";
         for (let i = 0; i < alternatives.length; i++) {
-          if (i === 0) premierTexte = alternatives[i].transcript;
-          const n = texteVersNombre(alternatives[i].transcript);
-          if (n !== null) {
-            resultat = { nombre: n, texte: alternatives[i].transcript };
+          const transcription = alternatives[i].transcript;
+          if (i === 0) premierTexte = transcription;
+          const analyse = analyser(transcription);
+          if (analyse !== null) {
+            resultat = { valeur: analyse.valeur, affichage: analyse.affichage, texte: transcription };
             break;
           }
         }
-        if (!resultat) resultat = { nombre: null, texte: premierTexte };
+        if (!resultat) resultat = { valeur: null, texte: premierTexte };
       };
 
       rec.onerror = (evenement) => {
@@ -621,10 +655,16 @@
         reconnaissanceEnCours = null;
         bouton.classList.remove("ecoute");
         bouton.textContent = "🎤";
-        if (resultat && resultat.nombre !== null) {
-          champ.value = String(resultat.nombre);
+        if (resultat && resultat.valeur !== null) {
+          const actuel = champ.value.replace(/\s/g, "");
+          if (ajouterApresPlus && actuel.endsWith("+")) {
+            champ.value = actuel + resultat.valeur;
+          } else {
+            champ.value = resultat.valeur;
+          }
+          champ.dispatchEvent(new Event("input"));
           elementMessage.style.color = "#1e8449";
-          elementMessage.textContent = "Compris : " + formater(resultat.nombre) + ". Vérifie avant d'enregistrer.";
+          elementMessage.textContent = "Compris : " + resultat.affichage + ". Vérifie avant d'enregistrer.";
         } else if (erreur === "not-allowed" || erreur === "service-not-allowed") {
           elementMessage.style.color = "";
           elementMessage.textContent = "Le micro n'est pas autorisé. Autorise le micro pour ce site dans Chrome, puis réessaie.";
@@ -658,13 +698,34 @@
     if (!Reconnaissance) {
       btnVoixPrix.classList.add("cache");
       btnVoixStock.classList.add("cache");
+      btnVoixVente.classList.add("cache");
     }
 
     btnVoixPrix.addEventListener("click", () => {
-      dicterNombre(champPrix, btnVoixPrix, messageVoixPrix, "le prix, par exemple « deux mille cinq cents »", (n) => formaterFcfa(n));
+      dicterNombre(
+        champPrix, btnVoixPrix, messageVoixPrix,
+        "le prix, par exemple « deux mille cinq cents »",
+        analyseurNombre((n) => formaterFcfa(n)),
+        false
+      );
     });
+
     btnVoixStock.addEventListener("click", () => {
-      dicterNombre(champStock, btnVoixStock, messageVoixStock, "la quantité, par exemple « vingt »", (n) => String(n));
+      dicterNombre(
+        champStock, btnVoixStock, messageVoixStock,
+        "la quantité, par exemple « vingt »",
+        analyseurNombre((n) => String(n)),
+        false
+      );
+    });
+
+    btnVoixVente.addEventListener("click", () => {
+      dicterNombre(
+        champVenteQuantite, btnVoixVente, messageVoixVente,
+        "la quantité vendue, par exemple « trois » ou « trois plus quinze »",
+        texteVersQuantites,
+        true
+      );
     });
 
     // Écran de la boutique : version propriétaire ou version vendeur
@@ -1077,6 +1138,7 @@
 
     function reinitialiserVente() {
       champVenteQuantite.value = "";
+      messageVoixVente.textContent = "";
       aideQuantite.textContent = "";
       caseCredit.checked = false;
       blocCredit.classList.add("cache");
@@ -1777,6 +1839,7 @@
       });
 
       champVenteQuantite.value = "";
+      messageVoixVente.textContent = "";
       aideQuantite.textContent = "";
       caseCredit.checked = false;
       blocCredit.classList.add("cache");
