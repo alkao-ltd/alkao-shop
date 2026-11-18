@@ -30,7 +30,7 @@
     "inLanguage": "fr",
     "url": "https://alkao-ltd.github.io/alkao-shop/",
     "areaServed": ["Togo", "Bénin", "Burkina Faso", "Mali", "Côte d'Ivoire", "Sénégal", "Niger", "Guinée-Bissau"],
-    "description": "Application de gestion de boutique et de stock sur téléphone : suivi des ventes en FCFA, ventes à crédit, alertes de stock bas, vendeurs, mode sans internet.",
+    "description": "Application de gestion de boutique et de stock sur téléphone : suivi des ventes en FCFA, ventes à crédit, alertes de stock bas, vendeurs, saisie vocale, mode sans internet.",
     "featureList": [
       "Application de gestion de stock sur téléphone",
       "Enregistrement des ventes",
@@ -39,6 +39,7 @@
       "Résumé des ventes par produit et historique par date",
       "Gestion de plusieurs boutiques",
       "Accès limité pour les employés",
+      "Saisie vocale des prix et des quantités",
       "Fonctionne sans internet"
     ]
   }
@@ -63,6 +64,11 @@
     button.vert { background: #1e8449; }
     button.petit { width: auto; margin: 0; padding: 8px 12px; font-size: 14px; }
     button.danger { background: #c0392b; }
+    .champ-vocal { display: flex; align-items: center; gap: 8px; }
+    .champ-vocal input { flex: 1; min-width: 0; }
+    button.micro { width: 56px; flex-shrink: 0; margin: 0; padding: 12px 0; font-size: 22px; line-height: 1; background: #1b6ef3; }
+    button.micro.ecoute { background: #c0392b; }
+    .voix { margin: 0 0 6px 0; font-size: 14px; min-height: 18px; }
     #message, #message-boutique, #message-produit, #message-vente, #message-vendeur, #message-impayes, #message-lien, #message-lien-vendeurs { color: #c0392b; min-height: 20px; }
     h3 { margin: 16px 0 4px 0; }
     ul { list-style: none; padding: 0; margin: 12px 0; }
@@ -127,6 +133,7 @@
       <h3>Application de gestion de stock pour votre boutique</h3>
       <ul>
         <li>Enregistrez vos produits avec leur nom, leur prix et leur quantité en stock.</li>
+        <li>Dictez un prix ou une quantité à la voix, sans taper (avec internet).</li>
         <li>À chaque vente, le stock baisse tout seul : fini les calculs à la main.</li>
         <li>Ajoutez du stock quand vous recevez de la marchandise : l'application garde chaque entrée.</li>
         <li>Recevez une alerte de stock bas quand il reste un quart du stock, pour savoir quand racheter.</li>
@@ -237,8 +244,16 @@
       <div id="bloc-formulaire-produit">
         <h3 id="titre-formulaire">Ajouter un produit</h3>
         <input id="nom-produit" type="text" placeholder="Nom du produit" maxlength="60">
-        <input id="prix-produit" type="number" inputmode="numeric" min="0" placeholder="Prix (FCFA)">
-        <input id="stock-produit" type="number" inputmode="numeric" min="0" placeholder="Quantité en stock">
+        <div class="champ-vocal">
+          <input id="prix-produit" type="number" inputmode="numeric" min="0" placeholder="Prix (FCFA)">
+          <button id="btn-voix-prix" type="button" class="micro" aria-label="Dicter le prix à la voix">🎤</button>
+        </div>
+        <p id="message-voix-prix" class="voix astuce"></p>
+        <div class="champ-vocal">
+          <input id="stock-produit" type="number" inputmode="numeric" min="0" placeholder="Quantité en stock">
+          <button id="btn-voix-stock" type="button" class="micro" aria-label="Dicter la quantité à la voix">🎤</button>
+        </div>
+        <p id="message-voix-stock" class="voix astuce"></p>
         <p id="aide-stock" class="astuce cache"></p>
         <button id="btn-enregistrer-produit">Ajouter le produit</button>
         <button id="btn-annuler" class="gris cache">Annuler la modification</button>
@@ -377,7 +392,11 @@
     const titreFormulaire = document.getElementById("titre-formulaire");
     const champNomProduit = document.getElementById("nom-produit");
     const champPrix = document.getElementById("prix-produit");
+    const btnVoixPrix = document.getElementById("btn-voix-prix");
+    const messageVoixPrix = document.getElementById("message-voix-prix");
     const champStock = document.getElementById("stock-produit");
+    const btnVoixStock = document.getElementById("btn-voix-stock");
+    const messageVoixStock = document.getElementById("message-voix-stock");
     const aideStock = document.getElementById("aide-stock");
     const btnEnregistrerProduit = document.getElementById("btn-enregistrer-produit");
     const btnAnnuler = document.getElementById("btn-annuler");
@@ -431,6 +450,7 @@
     let ventesActuelles = [];
     let historiqueOuvert = false;
     let impayesOuverts = false;
+    let reconnaissanceEnCours = null;
 
     // Bandeau « Hors connexion »
     function majConnexion() {
@@ -492,6 +512,160 @@
 
     btnCopierLien.addEventListener("click", () => copierLienApplication(messageLien));
     btnCopierLienVendeurs.addEventListener("click", () => copierLienApplication(messageLienVendeurs));
+
+    // ----- Dictée vocale des nombres (prix, quantité en stock) -----
+
+    const Reconnaissance = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    // Transforme ce que le micro a compris (chiffres ou mots français) en nombre entier
+    function texteVersNombre(texte) {
+      let t = String(texte || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      t = t.replace(/[-']/g, " ");
+      // « 2 500 », « 2.500 » ou « 2,500 » deviennent 2500
+      t = t.replace(/(\d)[\s\u00a0\u202f.,]+(?=\d{3}(?!\d))/g, "$1");
+      const jetons = t.split(/\s+/).filter(Boolean);
+      const mots = {
+        zero: 0, un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6, sept: 7, huit: 8, neuf: 9,
+        dix: 10, onze: 11, douze: 12, treize: 13, quatorze: 14, quinze: 15, seize: 16,
+        vingt: 20, vingts: 20, trente: 30, quarante: 40, cinquante: 50, soixante: 60
+      };
+      let total = 0;
+      let courant = 0;
+      let trouve = false;
+      let precedent = "";
+      for (const jeton of jetons) {
+        if (/^\d+$/.test(jeton)) {
+          courant += Number(jeton);
+          trouve = true;
+        } else if (Object.prototype.hasOwnProperty.call(mots, jeton)) {
+          if ((jeton === "vingt" || jeton === "vingts") && precedent === "quatre") {
+            courant += 76; // quatre-vingt = 80
+          } else {
+            courant += mots[jeton];
+          }
+          trouve = true;
+        } else if (jeton === "cent" || jeton === "cents") {
+          courant = (courant === 0 ? 1 : courant) * 100;
+          trouve = true;
+        } else if (jeton === "mille") {
+          total += (courant === 0 ? 1 : courant) * 1000;
+          courant = 0;
+          trouve = true;
+        }
+        precedent = jeton;
+      }
+      if (!trouve) return null;
+      const nombre = total + courant;
+      return nombre <= 100000000 ? nombre : null;
+    }
+
+    function arreterDictee() {
+      if (reconnaissanceEnCours) {
+        try { reconnaissanceEnCours.abort(); } catch (e) { /* rien */ }
+        reconnaissanceEnCours = null;
+      }
+    }
+
+    // Écoute la voix et écrit le nombre compris dans la case
+    function dicterNombre(champ, bouton, elementMessage, consigne, formater) {
+      elementMessage.style.color = "";
+      elementMessage.textContent = "";
+
+      if (!Reconnaissance) {
+        elementMessage.textContent = "La dictée vocale n'est pas disponible sur ce navigateur. Utilise Chrome.";
+        return;
+      }
+      if (!navigator.onLine) {
+        elementMessage.textContent = "La dictée vocale demande internet. Écris le nombre à la main.";
+        return;
+      }
+      // Un 2e appui arrête l'écoute en cours
+      if (reconnaissanceEnCours) {
+        try { reconnaissanceEnCours.stop(); } catch (e) { /* rien */ }
+        return;
+      }
+
+      const rec = new Reconnaissance();
+      rec.lang = "fr-FR";
+      rec.interimResults = false;
+      rec.continuous = false;
+      rec.maxAlternatives = 3;
+      reconnaissanceEnCours = rec;
+
+      let resultat = null;
+      let erreur = "";
+
+      bouton.classList.add("ecoute");
+      bouton.textContent = "🔴";
+      elementMessage.textContent = "J'écoute… dis " + consigne + ".";
+
+      rec.onresult = (evenement) => {
+        const alternatives = evenement.results[0];
+        let premierTexte = "";
+        for (let i = 0; i < alternatives.length; i++) {
+          if (i === 0) premierTexte = alternatives[i].transcript;
+          const n = texteVersNombre(alternatives[i].transcript);
+          if (n !== null) {
+            resultat = { nombre: n, texte: alternatives[i].transcript };
+            break;
+          }
+        }
+        if (!resultat) resultat = { nombre: null, texte: premierTexte };
+      };
+
+      rec.onerror = (evenement) => {
+        erreur = evenement.error || "erreur";
+      };
+
+      rec.onend = () => {
+        reconnaissanceEnCours = null;
+        bouton.classList.remove("ecoute");
+        bouton.textContent = "🎤";
+        if (resultat && resultat.nombre !== null) {
+          champ.value = String(resultat.nombre);
+          elementMessage.style.color = "#1e8449";
+          elementMessage.textContent = "Compris : " + formater(resultat.nombre) + ". Vérifie avant d'enregistrer.";
+        } else if (erreur === "not-allowed" || erreur === "service-not-allowed") {
+          elementMessage.style.color = "";
+          elementMessage.textContent = "Le micro n'est pas autorisé. Autorise le micro pour ce site dans Chrome, puis réessaie.";
+        } else if (erreur === "no-speech") {
+          elementMessage.style.color = "";
+          elementMessage.textContent = "Je n'ai rien entendu. Appuie sur 🎤 et parle plus près du téléphone.";
+        } else if (erreur === "network") {
+          elementMessage.style.color = "";
+          elementMessage.textContent = "Pas de connexion pour la dictée. Écris le nombre à la main.";
+        } else if (erreur === "aborted") {
+          elementMessage.textContent = "";
+        } else {
+          elementMessage.style.color = "";
+          elementMessage.textContent = resultat && resultat.texte
+            ? "Je n'ai pas compris un nombre dans « " + resultat.texte + " ». Réessaie."
+            : "Je n'ai pas compris. Réessaie ou écris le nombre à la main.";
+        }
+      };
+
+      try {
+        rec.start();
+      } catch (e) {
+        reconnaissanceEnCours = null;
+        bouton.classList.remove("ecoute");
+        bouton.textContent = "🎤";
+        elementMessage.style.color = "";
+        elementMessage.textContent = "Impossible de démarrer le micro. Réessaie.";
+      }
+    }
+
+    if (!Reconnaissance) {
+      btnVoixPrix.classList.add("cache");
+      btnVoixStock.classList.add("cache");
+    }
+
+    btnVoixPrix.addEventListener("click", () => {
+      dicterNombre(champPrix, btnVoixPrix, messageVoixPrix, "le prix, par exemple « deux mille cinq cents »", (n) => formaterFcfa(n));
+    });
+    btnVoixStock.addEventListener("click", () => {
+      dicterNombre(champStock, btnVoixStock, messageVoixStock, "la quantité, par exemple « vingt »", (n) => String(n));
+    });
 
     // Écran de la boutique : version propriétaire ou version vendeur
     function appliquerModeVendeur(estVendeur) {
@@ -891,6 +1065,8 @@
       champPrix.value = "";
       champStock.value = "";
       champStock.placeholder = "Quantité en stock";
+      messageVoixPrix.textContent = "";
+      messageVoixStock.textContent = "";
       aideStock.textContent = "";
       aideStock.classList.add("cache");
       titreFormulaire.textContent = "Ajouter un produit";
@@ -1020,6 +1196,7 @@
     }
 
     function fermerBoutique() {
+      arreterDictee();
       if (arreterEcouteProduits) {
         arreterEcouteProduits();
         arreterEcouteProduits = null;
@@ -1186,6 +1363,8 @@
             champPrix.value = p.prix;
             champStock.value = "";
             champStock.placeholder = "Quantité à ajouter (+)";
+            messageVoixPrix.textContent = "";
+            messageVoixStock.textContent = "";
             aideStock.textContent = "Stock actuel : " + p.stock + ". Écris la quantité à ajouter (laisse vide pour ne rien ajouter).";
             aideStock.classList.remove("cache");
             titreFormulaire.textContent = "Modifier le produit";
