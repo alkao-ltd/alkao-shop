@@ -106,14 +106,16 @@
     .presentation ul { list-style: disc; padding-left: 22px; margin: 8px 0; }
     .presentation li { display: list-item; border-bottom: none; padding: 3px 0; font-size: 16px; }
     .presentation a.whatsapp { display: block; text-align: center; background: #1e8449; color: white; text-decoration: none; padding: 12px; border-radius: 8px; font-size: 16px; margin-top: 10px; }
-    .abo { background: #eef3fd; border: 1px solid #c5d5f5; border-radius: 10px; padding: 12px; margin-top: 16px; }
-    .abo h3 { margin-top: 0; }
-    .abo p { margin: 6px 0; }
-    #abo-statut { font-weight: bold; font-size: 17px; }
-    #abo-detail { font-size: 14px; }
-    a.lien-achat { display: block; text-align: center; background: #1b6ef3; color: white; text-decoration: none; padding: 12px; border-radius: 8px; font-size: 16px; margin-top: 8px; }
-    #message-abo { color: #c0392b; min-height: 20px; }
-    .verrou { background: #fdecea; border: 1px solid #e6a39b; color: #922b21; border-radius: 10px; padding: 10px 12px; margin: 12px 0; font-size: 15px; }
+    .abo { border-radius: 10px; padding: 12px; margin: 0 0 12px 0; background: #eef7f0; border: 1px solid #b7dfc2; }
+    .abo.attention { background: #fff8e1; border-color: #f0d78c; }
+    .abo.fini { background: #fdecea; border-color: #e6a39b; }
+    .abo p { margin: 4px 0; }
+    #abo-etat { font-weight: bold; }
+    .abo-detail { margin-top: 10px; }
+    .abo a.achat { display: block; text-align: center; background: #1b6ef3; color: white; text-decoration: none; padding: 12px; border-radius: 8px; font-size: 16px; margin-top: 8px; }
+    .abo a.achat.gris { background: #777; }
+    #message-abo { min-height: 20px; }
+    .ferme { background: #f4f6fb; border: 1px dashed #b5bccd; border-radius: 10px; padding: 12px; margin-top: 16px; color: #555; }
   </style>
 </head>
 <body>
@@ -121,9 +123,7 @@
     <img src="logo.png" alt="Logo Alkao">
     <h1>Gestionnaire de boutique</h1>
   </header>
-
   <div id="bandeau-hors-ligne" class="bandeau cache">Hors connexion : tes ventes restent sur ce téléphone et seront envoyées dès le retour d'internet.</div>
-
   <main>
     <div id="ecran-connexion" class="carte">
       <h2 id="titre">Connexion</h2>
@@ -133,12 +133,9 @@
       <button id="btn-bascule" class="lien">Pas de compte ? Créer un compte</button>
       <p id="message"></p>
     </div>
-
     <section id="presentation" class="carte presentation">
       <h2>Alkao Shop : application de gestion de boutique et de stock sur téléphone</h2>
-      <p>Alkao Shop est une application de gestion de boutique pour les commerçants et les boutiquiers d'Afrique francophone : au Togo, au Bénin, au Burkina Faso, au Mali, en Côte d'Ivoire, au Sénégal, au Niger et en Guinée-Bissau (zone UEMOA). Elle remplace le cahier de ventes : vous suivez votre stock, vous enregistrez vos ventes et vous savez à tout moment combien vous avez encaissé, en FCFA, depuis votre téléphone.</p>
-
-      <h3>Application de gestion de stock pour votre boutique</h3>
+      <p>Alkao Shop est une application de gestion de boutique pour les commerçants et les boutiquiers d'Afrique francophone : au Togo, au Bénin, au Burkina Faso, au Mali, en Côte d'Ivoire, au Sénégal, au Niger et en Guinée-Bissau (zone UEMOA). Elle remplace le cahier de ventes : vous suivez votre stock, vous enregistrez vos ventes et vous savez à tout moment combien vous avez encaissé, en FCFA, depuis votre téléphone.</p>      <h3>Application de gestion de stock pour votre boutique</h3>
       <ul>
         <li>Enregistrez vos produits avec leur nom, leur prix et leur quantité en stock.</li>
         <li>Dictez un prix, un stock ou une quantité vendue à la voix, sans taper (avec internet).</li>
@@ -152,3 +149,1811 @@
         <li>Enregistrez une vente en quelques secondes, avec la quantité vendue.</li>
         <li>Notez les ventes à crédit : qui vous doit combien, et encaissez en un ou plusieurs paiements.</li>
         <li>Consultez le résumé de vos ventes : nombre de ventes et argent encaissé, en FCFA.</li>
+        <li>Voyez vos ventes produit par produit, et l'historique par date.</li>
+        <li>Gérez plusieurs boutiques dans un seul compte et voyez toutes vos boutiques d'un coup d'œil.</li>
+        <li>Donnez un accès limité à vos employés : ils enregistrent les ventes, et vous voyez qui a vendu quoi.</li>
+      </ul>
+
+      <h3>Gestion de boutique sans internet</h3>
+      <p>Pas de connexion ? Continuez à vendre. Alkao Shop garde vos ventes sur votre téléphone et les envoie dès que internet revient.</p>
+
+      <h3>Pour qui ?</h3>
+      <p>Pour les boutiques de quartier et les grands magasins, à Lomé, Cotonou, Ouagadougou, Bamako, Abidjan, Dakar, Niamey et partout en Afrique de l'Ouest : vendeurs de boissons, de vêtements, de produits de beauté ou de provisions. Toute personne qui vend des produits et veut mieux suivre son stock et son argent.</p>
+
+      <h3>Pourquoi remplacer le cahier de ventes ?</h3>
+      <p>Un cahier peut se perdre, se mouiller ou contenir des erreurs de calcul. Avec une application de gestion de stock sur téléphone, vos chiffres sont gardés en ligne et protégés par votre compte. Vous les retrouvez même si vous changez de téléphone.</p>
+
+      <h3>Questions fréquentes</h3>
+      <p><strong>Dans quels pays peut-on utiliser Alkao Shop ?</strong><br>Partout où l'on vend en FCFA : Togo, Bénin, Burkina Faso, Mali, Côte d'Ivoire, Sénégal, Niger, Guinée-Bissau, et plus largement en Afrique francophone. Il suffit d'un téléphone avec internet pour créer son compte.</p>
+      <p><strong>Comment gérer le stock de ma boutique avec Alkao Shop ?</strong><br>Ajoutez vos produits avec leur stock, puis enregistrez vos ventes : le stock se met à jour automatiquement, et une alerte vous prévient quand il est bas.</p>
+      <p><strong>Puis-je noter les clients qui ne paient pas tout de suite ?</strong><br>Oui. Choisissez « Vente à crédit », écrivez le nom du client, et retrouvez ensuite la liste des ventes impayées pour encaisser quand il paie.</p>
+      <p><strong>Faut-il toujours avoir internet ?</strong><br>Non. Alkao Shop garde vos ventes sur votre téléphone sans connexion et les envoie dès que internet revient.</p>
+      <p><strong>Mes données sont-elles privées ?</strong><br>Oui. Chaque commerçant a son propre compte, protégé par un email et un mot de passe, et ne voit que ses propres boutiques.</p>
+      <p><strong>Sur quel téléphone marche l'application ?</strong><br>Dans le navigateur de votre téléphone ou de votre ordinateur. Vous pouvez aussi l'ajouter à l'écran d'accueil de votre téléphone.</p>
+      <p><strong>Comment commencer ?</strong><br>Appuyez sur « Créer un compte » en haut de la page, avec votre email et un mot de passe.</p>
+
+      <h3>Une question ? Écrivez-nous</h3>
+      <p>Pour poser une question ou avoir de l'aide, contactez-nous sur WhatsApp.</p>
+      <a class="whatsapp" href="https://wa.me/22890659204">WhatsApp : +228 90 65 92 04</a>
+    </section>
+
+    <div id="ecran-accueil" class="carte cache">
+      <p id="qui"></p>
+
+      <div id="bloc-abo" class="abo cache">
+        <p id="abo-etat"></p>
+        <p id="abo-sous-etat" class="astuce"></p>
+        <button id="btn-abo" class="gris">Abonnement : acheter ou entrer un code</button>
+        <div id="abo-detail" class="abo-detail cache">
+          <p>Choisis ton abonnement et paie sur Chariow. Tu reçois un code de licence : colle-le ici.</p>
+          <a id="lien-achat-1" class="achat" href="#" target="_blank" rel="noopener">Acheter 1 mois : 2 000 FCFA</a>
+          <a id="lien-achat-3" class="achat gris" href="#" target="_blank" rel="noopener">Acheter 3 mois : 5 000 FCFA</a>
+          <input id="abo-code" type="text" placeholder="Colle ton code de licence" autocomplete="off" autocapitalize="off">
+          <button id="btn-activer" class="vert">Activer mon abonnement</button>
+          <p id="message-abo"></p>
+        </div>
+      </div>
+
+      <h2>Mes boutiques</h2>
+
+      <div id="vue-ensemble" class="resume cache">
+        <h3>Vue d'ensemble</h3>
+        <div id="ensemble-boutiques"></div>
+        <div id="ensemble-ventes"></div>
+        <div id="ensemble-argent"></div>
+        <small id="ensemble-note"></small>
+      </div>
+      <div id="ensemble-ferme" class="ferme cache">Vue d'ensemble fermée. Abonne-toi pour revoir toutes tes boutiques ensemble.</div>
+
+      <button id="btn-mes-vendeurs" class="gris">Mes vendeurs (employés)</button>
+      <button id="btn-copier-lien" class="gris">Copier le lien de l'application</button>
+      <p id="message-lien"></p>
+
+      <input id="nom-boutique" type="text" placeholder="Nom de la boutique" maxlength="60">
+      <button id="btn-ajouter">Ajouter la boutique</button>
+      <p id="message-boutique"></p>
+      <ul id="liste-boutiques"></ul>
+      <button id="btn-deco" class="gris">Se déconnecter</button>
+    </div>
+
+    <div id="ecran-vendeurs" class="carte cache">
+      <button id="btn-retour-vendeurs" class="lien">← Mes boutiques</button>
+      <h2>Mes vendeurs</h2>
+      <p class="astuce">Crée un accès pour un employé. Il pourra seulement enregistrer des ventes dans la boutique que tu choisis. Note bien son mot de passe : il n'est pas gardé.</p>
+      <button id="btn-copier-lien-vendeurs" class="gris">Copier le lien de l'application</button>
+      <p id="message-lien-vendeurs"></p>
+      <input id="vendeur-nom" type="text" placeholder="Nom du vendeur" maxlength="60" autocomplete="off">
+      <input id="vendeur-email" type="email" placeholder="Email du vendeur" autocomplete="off">
+      <input id="vendeur-mdp" type="text" placeholder="Mot de passe (6 caractères minimum)" autocomplete="off">
+      <select id="vendeur-boutique"></select>
+      <button id="btn-creer-vendeur" class="vert">Créer le vendeur</button>
+      <p id="message-vendeur"></p>
+      <h3>Mes vendeurs</h3>
+      <ul id="liste-vendeurs"></ul>
+    </div>
+
+    <div id="ecran-boutique" class="carte cache">
+      <button id="btn-retour" class="lien">← Mes boutiques</button>
+      <h2 id="titre-boutique"></h2>
+      <p id="info-vendeur" class="astuce cache"></p>
+
+      <div id="alerte-stock" class="alerte cache"></div>
+
+      <div class="bloc-vente">
+        <h3>Enregistrer une vente</h3>
+        <select id="vente-produit"></select>
+        <div class="champ-vocal">
+          <input id="vente-quantite" type="text" inputmode="tel" autocomplete="off" placeholder="Quantité vendue (ex. 3 ou 3+15)">
+          <button id="btn-voix-vente" type="button" class="micro" aria-label="Dicter la quantité vendue à la voix">🎤</button>
+        </div>
+        <p id="message-voix-vente" class="voix astuce"></p>
+        <p id="aide-quantite"></p>
+        <button id="btn-plus" type="button" class="gris">+ Ajouter une autre quantité</button>
+        <label class="case"><input id="vente-credit" type="checkbox"> Vente à crédit (le client n'a pas encore payé)</label>
+        <div id="bloc-credit" class="cache">
+          <input id="vente-client" type="text" placeholder="Nom du client" maxlength="60" autocomplete="off">
+          <input id="vente-tel" type="tel" placeholder="Téléphone du client (facultatif)" maxlength="20" autocomplete="off">
+        </div>
+        <button id="btn-vendre" class="vert">Enregistrer la vente</button>
+        <p id="message-vente"></p>
+      </div>
+
+      <button id="btn-impayes" class="gris">Ventes impayées</button>
+      <div id="bloc-impayes" class="impayes cache">
+        <h3>Ventes impayées</h3>
+        <p id="impayes-total"></p>
+        <p id="message-impayes"></p>
+        <ul id="liste-impayes"></ul>
+      </div>
+
+      <div id="bloc-formulaire-produit">
+        <h3 id="titre-formulaire">Ajouter un produit</h3>
+        <input id="nom-produit" type="text" placeholder="Nom du produit" maxlength="60">
+        <div class="champ-vocal">
+          <input id="prix-produit" type="number" inputmode="numeric" min="0" placeholder="Prix (FCFA)">
+          <button id="btn-voix-prix" type="button" class="micro" aria-label="Dicter le prix à la voix">🎤</button>
+        </div>
+        <p id="message-voix-prix" class="voix astuce"></p>
+        <div class="champ-vocal">
+          <input id="stock-produit" type="number" inputmode="numeric" min="0" placeholder="Quantité en stock">
+          <button id="btn-voix-stock" type="button" class="micro" aria-label="Dicter la quantité à la voix">🎤</button>
+        </div>
+        <p id="message-voix-stock" class="voix astuce"></p>
+        <p id="aide-stock" class="astuce cache"></p>
+        <button id="btn-enregistrer-produit">Ajouter le produit</button>
+        <button id="btn-annuler" class="gris cache">Annuler la modification</button>
+        <p id="message-produit"></p>
+  </div>      <h3>Mes produits</h3>
+      <input id="recherche-produit" type="search" autocomplete="off" placeholder="Rechercher un produit">
+      <ul id="liste-produits"></ul>
+
+      <h3>Dernières ventes</h3>
+      <ul id="liste-ventes"></ul>
+
+      <button id="btn-historique" class="gris">Voir l'historique complet</button>
+      <div id="bloc-historique" class="historique cache">
+        <h3>Historique complet</h3>
+        <label for="histo-du">Du</label>
+        <input id="histo-du" type="date">
+        <label for="histo-au">Au</label>
+        <input id="histo-au" type="date">
+        <button id="btn-histo-toutes" class="gris">Toutes les dates</button>
+        <p id="histo-total"></p>
+        <ul id="liste-historique"></ul>
+      </div>
+
+      <div id="bloc-resume" class="resume">
+        <h3>Résumé des ventes</h3>
+        <div id="resume-nb">Nombre de ventes : …</div>
+        <div id="resume-total">Argent encaissé : …</div>
+        <div id="resume-produits"></div>
+        <button id="btn-reinit-resume" class="danger">Tout remettre à zéro (ventes et résumé)</button>
+      </div>
+      <div id="resume-ferme" class="ferme cache">Résumé des ventes fermé. Abonne-toi (écran « Mes boutiques ») pour le revoir.</div>
+
+      <button id="btn-deco-vendeur" class="gris cache">Se déconnecter</button>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+    import {
+      getFirestore,
+      initializeFirestore,
+      persistentLocalCache,
+      persistentMultipleTabManager,
+      collection,
+      addDoc,
+      setDoc,
+      getDoc,
+      updateDoc,
+      deleteDoc,
+      getDocs,
+      writeBatch,
+      increment,
+      doc,
+      onSnapshot,
+      query,
+      where,
+      orderBy,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA5pfMUT8xnSNeRAhgR5dbGRnXx_Itn09o",
+      authDomain: "alka-shop-e10e2.firebaseapp.com",
+      projectId: "alka-shop-e10e2",
+      storageBucket: "alka-shop-e10e2.firebasestorage.app",
+      messagingSenderId: "170951024988",
+      appId: "1:170951024988:web:ff001f15fd2b0924ca6199"
+    };
+
+    // Adresse de l'application, à envoyer aux commerçants et aux employés
+    const LIEN_APPLICATION = "https://alkao-ltd.github.io/alkao-shop/";
+
+    // Abonnement : 90 jours d'essai, puis code de licence acheté sur Chariow
+    const WORKER_URL = "https://alkao-activa.alkaolimited.workers.dev";
+    const LIEN_ACHAT_1 = "https://yeyxveju.mychariow.store/prd_dn7q4ri0";
+    const LIEN_ACHAT_3 = "https://yeyxveju.mychariow.store/prd_8o99vsx4";
+    const JOURS_ESSAI = 90;
+    const MS_JOUR = 86400000;
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Mémoire hors connexion : les données restent sur le téléphone
+    let db;
+    try {
+      db = initializeFirestore(app, {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+      });
+    } catch (e) {
+      db = getFirestore(app);
+    }
+
+    const bandeauHorsLigne = document.getElementById("bandeau-hors-ligne");
+    const ecranConnexion = document.getElementById("ecran-connexion");
+    const presentation = document.getElementById("presentation");
+    const ecranAccueil = document.getElementById("ecran-accueil");
+    const ecranVendeurs = document.getElementById("ecran-vendeurs");
+    const ecranBoutique = document.getElementById("ecran-boutique");
+    const titre = document.getElementById("titre");
+    const champEmail = document.getElementById("email");
+    const champMdp = document.getElementById("mdp");
+    const btnPrincipal = document.getElementById("btn-principal");
+    const btnBascule = document.getElementById("btn-bascule");
+    const btnDeco = document.getElementById("btn-deco");
+    const btnDecoVendeur = document.getElementById("btn-deco-vendeur");
+    const message = document.getElementById("message");
+    const qui = document.getElementById("qui");
+    const vueEnsemble = document.getElementById("vue-ensemble");
+    const ensembleBoutiques = document.getElementById("ensemble-boutiques");
+    const ensembleVentes = document.getElementById("ensemble-ventes");
+    const ensembleArgent = document.getElementById("ensemble-argent");
+    const ensembleNote = document.getElementById("ensemble-note");
+    const btnMesVendeurs = document.getElementById("btn-mes-vendeurs");
+    const btnCopierLien = document.getElementById("btn-copier-lien");
+    const messageLien = document.getElementById("message-lien");
+    const btnCopierLienVendeurs = document.getElementById("btn-copier-lien-vendeurs");
+    const messageLienVendeurs = document.getElementById("message-lien-vendeurs");
+    const champNomBoutique = document.getElementById("nom-boutique");
+    const btnAjouter = document.getElementById("btn-ajouter");
+    const messageBoutique = document.getElementById("message-boutique");
+    const listeBoutiques = document.getElementById("liste-boutiques");
+    const btnRetourVendeurs = document.getElementById("btn-retour-vendeurs");
+    const champVendeurNom = document.getElementById("vendeur-nom");
+    const champVendeurEmail = document.getElementById("vendeur-email");
+    const champVendeurMdp = document.getElementById("vendeur-mdp");
+    const champVendeurBoutique = document.getElementById("vendeur-boutique");
+    const btnCreerVendeur = document.getElementById("btn-creer-vendeur");
+    const messageVendeur = document.getElementById("message-vendeur");
+    const listeVendeurs = document.getElementById("liste-vendeurs");
+    const btnRetour = document.getElementById("btn-retour");
+    const titreBoutique = document.getElementById("titre-boutique");
+    const infoVendeur = document.getElementById("info-vendeur");
+    const blocFormulaireProduit = document.getElementById("bloc-formulaire-produit");
+    const blocResume = document.getElementById("bloc-resume");
+    const titreFormulaire = document.getElementById("titre-formulaire");
+    const champNomProduit = document.getElementById("nom-produit");
+    const champPrix = document.getElementById("prix-produit");
+    const btnVoixPrix = document.getElementById("btn-voix-prix");
+    const messageVoixPrix = document.getElementById("message-voix-prix");
+    const champStock = document.getElementById("stock-produit");
+    const btnVoixStock = document.getElementById("btn-voix-stock");
+    const messageVoixStock = document.getElementById("message-voix-stock");
+    const aideStock = document.getElementById("aide-stock");
+    const btnEnregistrerProduit = document.getElementById("btn-enregistrer-produit");
+    const btnAnnuler = document.getElementById("btn-annuler");
+    const messageProduit = document.getElementById("message-produit");
+    const champRecherche = document.getElementById("recherche-produit");
+    const listeProduits = document.getElementById("liste-produits");
+    const champVenteProduit = document.getElementById("vente-produit");
+    const champVenteQuantite = document.getElementById("vente-quantite");
+    const btnVoixVente = document.getElementById("btn-voix-vente");
+    const messageVoixVente = document.getElementById("message-voix-vente");
+    const aideQuantite = document.getElementById("aide-quantite");
+    const btnPlus = document.getElementById("btn-plus");
+    const caseCredit = document.getElementById("vente-credit");
+    const blocCredit = document.getElementById("bloc-credit");
+    const champClient = document.getElementById("vente-client");
+    const champTel = document.getElementById("vente-tel");
+    const btnVendre = document.getElementById("btn-vendre");
+    const messageVente = document.getElementById("message-vente");
+    const btnImpayes = document.getElementById("btn-impayes");
+    const blocImpayes = document.getElementById("bloc-impayes");
+    const impayesTotal = document.getElementById("impayes-total");
+    const messageImpayes = document.getElementById("message-impayes");
+    const listeImpayes = document.getElementById("liste-impayes");
+    const listeVentes = document.getElementById("liste-ventes");
+    const btnHistorique = document.getElementById("btn-historique");
+    const blocHistorique = document.getElementById("bloc-historique");
+    const histoDu = document.getElementById("histo-du");
+    const histoAu = document.getElementById("histo-au");
+    const btnHistoToutes = document.getElementById("btn-histo-toutes");
+    const histoTotal = document.getElementById("histo-total");
+    const listeHistorique = document.getElementById("liste-historique");
+    const blocAlerte = document.getElementById("alerte-stock");
+    const resumeNb = document.getElementById("resume-nb");
+    const resumeTotal = document.getElementById("resume-total");
+    const resumeProduits = document.getElementById("resume-produits");
+    const btnReinitResume = document.getElementById("btn-reinit-resume");
+    const resumeFerme = document.getElementById("resume-ferme");
+    const ensembleFerme = document.getElementById("ensemble-ferme");
+    const blocAbo = document.getElementById("bloc-abo");
+    const aboEtat = document.getElementById("abo-etat");
+    const aboSousEtat = document.getElementById("abo-sous-etat");
+    const btnAbo = document.getElementById("btn-abo");
+    const aboDetail = document.getElementById("abo-detail");
+    const lienAchat1 = document.getElementById("lien-achat-1");
+    const lienAchat3 = document.getElementById("lien-achat-3");
+    const champCodeAbo = document.getElementById("abo-code");
+    const btnActiver = document.getElementById("btn-activer");
+    const messageAbo = document.getElementById("message-abo");    let modeInscription = false;
+    let utilisateurActuel = null;
+    let vendeurInfo = null;
+    let arreterEcouteBoutiques = null;
+    let arreterEcouteVendeurs = null;
+    let arreterEcouteProduits = null;
+    let arreterEcouteVentes = null;
+    let arreterEcouteResume = null;
+    let resumeCalcule = false;
+    let resumeActif = false;
+    let boutiqueActuelle = null;
+    let boutiquesActuelles = [];
+    let produitEnModification = null;
+    let produitsActuels = [];
+    let instantaneProduits = null;
+    let ventesActuelles = [];
+    let historiqueOuvert = false;
+    let impayesOuverts = false;
+    let reconnaissanceEnCours = null;
+    let abonnement = { actif: true, type: "charge", jours: 0, date: null };
+    let arreterEcouteAbo = null;
+    let creationEssaiEnvoyee = false;
+    let derniereInstantaneBoutiques = null;
+
+    // Bandeau « Hors connexion »
+    function majConnexion() {
+      bandeauHorsLigne.classList.toggle("cache", navigator.onLine);
+    }
+    window.addEventListener("online", majConnexion);
+    window.addEventListener("offline", majConnexion);
+    majConnexion();
+
+    // La présentation publique ne s'affiche que sur l'écran de connexion
+    function montrer(ecran) {
+      [ecranConnexion, ecranAccueil, ecranVendeurs, ecranBoutique].forEach((e) => e.classList.add("cache"));
+      ecran.classList.remove("cache");
+      presentation.classList.toggle("cache", ecran !== ecranConnexion);
+    }
+
+    // ----- Copier le lien de l'application -----
+
+    // Copie un texte dans le presse-papiers ; renvoie vrai si ça a marché
+    async function copierTexte(texte) {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(texte);
+          return true;
+        }
+      } catch (e) {
+        /* on essaie l'autre méthode */
+      }
+      try {
+        const zone = document.createElement("textarea");
+        zone.value = texte;
+        zone.setAttribute("readonly", "");
+        zone.style.position = "fixed";
+        zone.style.top = "0";
+        zone.style.opacity = "0";
+        document.body.appendChild(zone);
+        zone.focus();
+        zone.select();
+        zone.setSelectionRange(0, texte.length);
+        const ok = document.execCommand("copy");
+        document.body.removeChild(zone);
+        return ok;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    async function copierLienApplication(elementMessage) {
+      elementMessage.style.color = "";
+      elementMessage.textContent = "";
+      const ok = await copierTexte(LIEN_APPLICATION);
+      if (ok) {
+        elementMessage.style.color = "#1e8449";
+        elementMessage.textContent = "Lien copié ! Colle-le dans WhatsApp ou dans un message.";
+      } else {
+        elementMessage.textContent = "Impossible de copier. Le lien est : " + LIEN_APPLICATION;
+      }
+    }
+
+    btnCopierLien.addEventListener("click", () => copierLienApplication(messageLien));
+    btnCopierLienVendeurs.addEventListener("click", () => copierLienApplication(messageLienVendeurs));
+
+    // ----- Dictée vocale (prix, quantité en stock, quantité vendue) -----
+
+    const Reconnaissance = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    // Transforme ce que le micro a compris (chiffres ou mots français) en nombre entier
+    function texteVersNombre(texte) {
+      let t = String(texte || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      t = t.replace(/[-']/g, " ");
+      // « 2 500 », « 2.500 » ou « 2,500 » deviennent 2500
+      t = t.replace(/(\d)[\s\u00a0\u202f.,]+(?=\d{3}(?!\d))/g, "$1");
+      const jetons = t.split(/\s+/).filter(Boolean);
+      const mots = {
+        zero: 0, un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6, sept: 7, huit: 8, neuf: 9,
+        dix: 10, onze: 11, douze: 12, treize: 13, quatorze: 14, quinze: 15, seize: 16,
+        vingt: 20, vingts: 20, trente: 30, quarante: 40, cinquante: 50, soixante: 60
+      };
+      let total = 0;
+      let courant = 0;
+      let trouve = false;
+      let precedent = "";
+      for (const jeton of jetons) {
+        if (/^\d+$/.test(jeton)) {
+          courant += Number(jeton);
+          trouve = true;
+        } else if (Object.prototype.hasOwnProperty.call(mots, jeton)) {
+          if ((jeton === "vingt" || jeton === "vingts") && precedent === "quatre") {
+            courant += 76; // quatre-vingt = 80
+          } else {
+            courant += mots[jeton];
+          }
+          trouve = true;
+        } else if (jeton === "cent" || jeton === "cents") {
+          courant = (courant === 0 ? 1 : courant) * 100;
+          trouve = true;
+        } else if (jeton === "mille") {
+          total += (courant === 0 ? 1 : courant) * 1000;
+          courant = 0;
+          trouve = true;
+        }
+        precedent = jeton;
+      }
+      if (!trouve) return null;
+      const nombre = total + courant;
+      return nombre <= 100000000 ? nombre : null;
+    }
+
+    // Un seul nombre (prix ou stock) : renvoie la valeur à écrire et le texte à afficher
+    function analyseurNombre(formater) {
+      return (texte) => {
+        const n = texteVersNombre(texte);
+        return n === null ? null : { valeur: String(n), affichage: formater(n) };
+      };
+    }
+
+    // Quantité vendue : un nombre, ou plusieurs séparés par « plus » (ex. « trois plus quinze » devient 3+15)
+    function texteVersQuantites(texte) {
+      const morceaux = String(texte || "").toLowerCase().split(/\s*\+\s*|\s+plus\s+/);
+      const nombres = [];
+      for (const morceau of morceaux) {
+        const n = texteVersNombre(morceau);
+        if (n === null || n < 1 || n > 1000000) return null;
+        nombres.push(n);
+      }
+      if (nombres.length === 0) return null;
+      const total = nombres.reduce((a, b) => a + b, 0);
+      if (total > 1000000) return null;
+      return {
+        valeur: nombres.join("+"),
+        affichage: nombres.length > 1 ? nombres.join(" + ") + " = " + total : String(total)
+      };
+    }
+
+    function arreterDictee() {
+      if (reconnaissanceEnCours) {
+        try { reconnaissanceEnCours.abort(); } catch (e) { /* rien */ }
+        reconnaissanceEnCours = null;
+      }
+    }
+
+    // Écoute la voix et écrit ce qui est compris dans la case
+    // ajouterApresPlus : si la case se termine par « + », on ajoute à la suite au lieu de remplacer
+    function dicterNombre(champ, bouton, elementMessage, consigne, analyser, ajouterApresPlus) {
+      elementMessage.style.color = "";
+      elementMessage.textContent = "";
+
+      if (!abonnement.actif) {
+        elementMessage.textContent = "La dictée vocale est réservée aux abonnés. Écris le nombre à la main.";
+        return;
+      }
+      if (!Reconnaissance) {
+        elementMessage.textContent = "La dictée vocale n'est pas disponible sur ce navigateur. Utilise Chrome.";
+        return;
+      }
+      if (!navigator.onLine) {
+        elementMessage.textContent = "La dictée vocale demande internet. Écris le nombre à la main.";
+        return;
+      }
+      // Un 2e appui arrête l'écoute en cours
+      if (reconnaissanceEnCours) {
+        try { reconnaissanceEnCours.stop(); } catch (e) { /* rien */ }
+        return;
+      }
+
+      const rec = new Reconnaissance();
+      rec.lang = "fr-FR";
+      rec.interimResults = false;
+      rec.continuous = false;
+      rec.maxAlternatives = 3;
+      reconnaissanceEnCours = rec;
+
+      let resultat = null;
+      let erreur = "";
+
+      bouton.classList.add("ecoute");
+      bouton.textContent = "🔴";
+      elementMessage.textContent = "J'écoute… dis " + consigne + ".";
+
+      rec.onresult = (evenement) => {
+        const alternatives = evenement.results[0];
+        let premierTexte = "";
+        for (let i = 0; i < alternatives.length; i++) {
+          const transcription = alternatives[i].transcript;
+          if (i === 0) premierTexte = transcription;
+          const analyse = analyser(transcription);
+          if (analyse !== null) {
+            resultat = { valeur: analyse.valeur, affichage: analyse.affichage, texte: transcription };
+            break;
+          }
+        }
+        if (!resultat) resultat = { valeur: null, texte: premierTexte };
+      };
+
+      rec.onerror = (evenement) => {
+        erreur = evenement.error || "erreur";
+      };
+
+      rec.onend = () => {
+        reconnaissanceEnCours = null;
+        bouton.classList.remove("ecoute");
+        bouton.textContent = "🎤";
+        if (resultat && resultat.valeur !== null) {
+          const actuel = champ.value.replace(/\s/g, "");
+          if (ajouterApresPlus && actuel.endsWith("+")) {
+            champ.value = actuel + resultat.valeur;
+          } else {
+            champ.value = resultat.valeur;
+          }
+          champ.dispatchEvent(new Event("input"));
+          elementMessage.style.color = "#1e8449";
+          elementMessage.textContent = "Compris : " + resultat.affichage + ". Vérifie avant d'enregistrer.";
+        } else if (erreur === "not-allowed" || erreur === "service-not-allowed") {
+          elementMessage.style.color = "";
+          elementMessage.textContent = "Le micro n'est pas autorisé. Autorise le micro pour ce site dans Chrome, puis réessaie.";
+        } else if (erreur === "no-speech") {
+          elementMessage.style.color = "";
+          elementMessage.textContent = "Je n'ai rien entendu. Appuie sur 🎤 et parle plus près du téléphone.";
+        } else if (erreur === "network") {
+          elementMessage.style.color = "";
+          elementMessage.textContent = "Pas de connexion pour la dictée. Écris le nombre à la main.";
+        } else if (erreur === "aborted") {
+          elementMessage.textContent = "";
+        } else {
+          elementMessage.style.color = "";
+          elementMessage.textContent = resultat && resultat.texte
+            ? "Je n'ai pas compris un nombre dans « " + resultat.texte + " ». Réessaie."
+            : "Je n'ai pas compris. Réessaie ou écris le nombre à la main.";
+        }
+      };      try {
+        rec.start();
+      } catch (e) {
+        reconnaissanceEnCours = null;
+        bouton.classList.remove("ecoute");
+        bouton.textContent = "🎤";
+        elementMessage.style.color = "";
+        elementMessage.textContent = "Impossible de démarrer le micro. Réessaie.";
+      }
+    }
+
+    if (!Reconnaissance) {
+      btnVoixPrix.classList.add("cache");
+      btnVoixStock.classList.add("cache");
+      btnVoixVente.classList.add("cache");
+    }
+
+    btnVoixPrix.addEventListener("click", () => {
+      dicterNombre(
+        champPrix, btnVoixPrix, messageVoixPrix,
+        "le prix, par exemple « deux mille cinq cents »",
+        analyseurNombre((n) => formaterFcfa(n)),
+        false
+      );
+    });
+
+    btnVoixStock.addEventListener("click", () => {
+      dicterNombre(
+        champStock, btnVoixStock, messageVoixStock,
+        "la quantité, par exemple « vingt »",
+        analyseurNombre((n) => String(n)),
+        false
+      );
+    });
+
+    btnVoixVente.addEventListener("click", () => {
+      dicterNombre(
+        champVenteQuantite, btnVoixVente, messageVoixVente,
+        "la quantité vendue, par exemple « trois » ou « trois plus quinze »",
+        texteVersQuantites,
+        true
+      );
+    });
+
+    // Écran de la boutique : version propriétaire ou version vendeur
+    function appliquerModeVendeur(estVendeur) {
+      btnRetour.classList.toggle("cache", estVendeur);
+      blocFormulaireProduit.classList.toggle("cache", estVendeur);
+      btnHistorique.classList.toggle("cache", estVendeur);
+      btnImpayes.classList.toggle("cache", estVendeur);
+      btnDecoVendeur.classList.toggle("cache", !estVendeur);
+      infoVendeur.classList.toggle("cache", !estVendeur);
+      if (estVendeur) {
+        reinitialiserHistorique();
+        reinitialiserImpayes();
+      }
+      appliquerAbonnement();
+    }
+
+    // ----- Abonnement (essai de 90 jours, puis code de licence) -----
+
+    function enMillis(t) {
+      if (!t) return null;
+      if (typeof t.toMillis === "function") return t.toMillis();
+      const n = Number(t);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    // Calcule l'état de l'abonnement à partir de la fiche enregistrée
+    function calculerAbonnement(data) {
+      const debut = enMillis(data && data.debutEssai);
+      const expire = enMillis(data && data.expireLe);
+      const finEssai = debut === null ? null : debut + JOURS_ESSAI * MS_JOUR;
+      const maintenant = Date.now();
+      if (expire !== null && expire > maintenant) {
+        return { actif: true, type: "payant", jours: Math.ceil((expire - maintenant) / MS_JOUR), date: new Date(expire) };
+      }
+      if (finEssai !== null && finEssai > maintenant) {
+        return { actif: true, type: "essai", jours: Math.ceil((finEssai - maintenant) / MS_JOUR), date: new Date(finEssai) };
+      }
+      return { actif: false, type: "fini", jours: 0, date: new Date(Math.max(finEssai || 0, expire || 0)) };
+    }
+
+    // Applique les limites quand l'abonnement est fini : plus de micro, plus de résumé, vue d'ensemble fermée
+    function appliquerAbonnement() {
+      const ferme = !abonnement.actif;
+      const estVendeur = vendeurInfo !== null;
+      [btnVoixPrix, btnVoixStock, btnVoixVente].forEach((b) => {
+        b.classList.toggle("cache", ferme || !Reconnaissance);
+      });
+      if (ferme) arreterDictee();
+      blocResume.classList.toggle("cache", ferme || estVendeur);
+      resumeFerme.classList.toggle("cache", !(ferme && !estVendeur));
+    }
+
+    // Écrit l'état de l'abonnement sur l'écran « Mes boutiques »
+    function majAffichageAbonnement() {
+      appliquerAbonnement();
+      if (vendeurInfo || !utilisateurActuel) {
+        blocAbo.classList.add("cache");
+        return;
+      }
+      blocAbo.classList.remove("cache");
+      blocAbo.classList.remove("attention", "fini");
+      const dateTexte = abonnement.date ? abonnement.date.toLocaleDateString("fr-FR") : "";
+      const jourTexte = abonnement.jours + (abonnement.jours > 1 ? " jours" : " jour");
+      if (abonnement.type === "payant") {
+        aboEtat.textContent = "Abonnement actif : " + jourTexte + " restant" + (abonnement.jours > 1 ? "s" : "");
+        aboSousEtat.textContent = "Jusqu'au " + dateTexte + ".";
+        if (abonnement.jours <= 7) blocAbo.classList.add("attention");
+      } else if (abonnement.type === "essai") {
+        aboEtat.textContent = "Essai : " + jourTexte + " restant" + (abonnement.jours > 1 ? "s" : "");
+        aboSousEtat.textContent = "Jusqu'au " + dateTexte + ". Ensuite, abonne-toi pour garder le micro 🎤, le résumé des ventes et la vue d'ensemble.";
+        if (abonnement.jours <= 14) blocAbo.classList.add("attention");
+      } else if (abonnement.type === "fini") {
+        aboEtat.textContent = "Abonnement terminé";
+        aboSousEtat.textContent = "Tu peux toujours vendre. Le micro 🎤, le résumé des ventes et la vue d'ensemble sont fermés jusqu'à ton abonnement.";
+        blocAbo.classList.add("fini");
+        aboDetail.classList.remove("cache");
+      } else {
+        aboEtat.textContent = "Abonnement : chargement…";
+        aboSousEtat.textContent = "";
+      }
+      if (derniereInstantaneBoutiques) afficherBoutiques(derniereInstantaneBoutiques);
+    }
+
+    function arreterAbonnement() {
+      if (arreterEcouteAbo) {
+        arreterEcouteAbo();
+        arreterEcouteAbo = null;
+      }
+    }
+
+    // Propriétaire : on suit sa fiche d'abonnement ; elle est créée à sa première connexion
+    function demarrerAbonnement() {
+      arreterAbonnement();
+      const ref = doc(db, "abonnements", utilisateurActuel.uid);
+      arreterEcouteAbo = onSnapshot(
+        ref,
+        (instantane) => {
+          if (!instantane.exists()) {
+            if (!instantane.metadata.fromCache && !creationEssaiEnvoyee) {
+              creationEssaiEnvoyee = true;
+              setDoc(ref, { debutEssai: serverTimestamp() }).catch(() => { creationEssaiEnvoyee = false; });
+            }
+            abonnement = { actif: true, type: "essai", jours: JOURS_ESSAI, date: new Date(Date.now() + JOURS_ESSAI * MS_JOUR) };
+          } else {
+            abonnement = calculerAbonnement(instantane.data({ serverTimestamps: "estimate" }));
+          }
+          majAffichageAbonnement();
+        },
+        () => {
+          // Impossible de lire : on ne bloque pas le commerçant
+          abonnement = { actif: true, type: "charge", jours: 0, date: null };
+          majAffichageAbonnement();
+        }
+      );
+    }
+
+    // Vendeur : on regarde l'abonnement de son patron (si on ne peut pas le lire, rien n'est fermé)
+    async function lireAbonnementDuPatron(idPatron) {
+      try {
+        const instantane = await getDoc(doc(db, "abonnements", idPatron));
+        if (instantane.exists()) {
+          abonnement = calculerAbonnement(instantane.data());
+        }
+      } catch (e) {
+        abonnement = { actif: true, type: "charge", jours: 0, date: null };
+      }
+      appliquerAbonnement();
+    }
+
+    lienAchat1.href = LIEN_ACHAT_1;
+    lienAchat3.href = LIEN_ACHAT_3;
+
+    btnAbo.addEventListener("click", () => {
+      aboDetail.classList.toggle("cache");
+    });
+
+    // Activation par code de licence : le Worker vérifie le code et prolonge l'abonnement
+    btnActiver.addEventListener("click", async () => {
+      messageAbo.style.color = "#c0392b";
+      messageAbo.textContent = "";
+      const code = champCodeAbo.value.trim();
+      if (code.length === 0) {
+        messageAbo.textContent = "Colle ton code de licence.";
+        return;
+      }
+      if (!navigator.onLine) {
+        messageAbo.textContent = "Pour activer ton abonnement, connecte-toi à internet.";
+        return;
+      }
+      btnActiver.disabled = true;
+      messageAbo.style.color = "#555";
+      messageAbo.textContent = "Vérification…";
+      try {
+        const idToken = await utilisateurActuel.getIdToken();
+        const reponse = await fetch(WORKER_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: code, idToken: idToken })
+        });
+        const donnees = await reponse.json().catch(() => ({}));
+        if (reponse.ok && donnees.ok) {
+          messageAbo.style.color = "#1e8449";
+          messageAbo.textContent = "Abonnement activé ! " + (donnees.months || "") + " mois ajouté(s).";
+          champCodeAbo.value = "";
+        } else {
+          messageAbo.style.color = "#c0392b";
+          messageAbo.textContent = donnees.error || "Code refusé. Vérifie le code et réessaie.";
+        }
+      } catch (e) {
+        messageAbo.style.color = "#c0392b";
+        messageAbo.textContent = "Pas de connexion. Réessaie.";
+      }
+      btnActiver.disabled = false;
+    });
+
+    function erreurEnFrancais(code) {
+      const erreurs = {
+        "auth/invalid-credential": "Email ou mot de passe incorrect.",
+        "auth/invalid-email": "Cet email n'est pas valide.",
+        "auth/email-already-in-use": "Cet email a déjà un compte.",
+        "auth/weak-password": "Mot de passe trop court (6 caractères minimum).",
+        "auth/missing-password": "Écris ton mot de passe.",
+        "auth/network-request-failed": "Pas de connexion internet.",
+        "auth/too-many-requests": "Trop d'essais. Attends un moment."
+      };
+      return erreurs[code] || "Une erreur est survenue. Réessaie.";
+  }    btnBascule.addEventListener("click", () => {
+      modeInscription = !modeInscription;
+      message.textContent = "";
+      if (modeInscription) {
+        titre.textContent = "Créer un compte";
+        btnPrincipal.textContent = "Créer mon compte";
+        btnBascule.textContent = "J'ai déjà un compte";
+      } else {
+        titre.textContent = "Connexion";
+        btnPrincipal.textContent = "Se connecter";
+        btnBascule.textContent = "Pas de compte ? Créer un compte";
+      }
+    });
+
+    btnPrincipal.addEventListener("click", async () => {
+      message.textContent = "";
+      const email = champEmail.value.trim();
+      const mdp = champMdp.value;
+      try {
+        if (modeInscription) {
+          await createUserWithEmailAndPassword(auth, email, mdp);
+        } else {
+          await signInWithEmailAndPassword(auth, email, mdp);
+        }
+      } catch (e) {
+        message.textContent = erreurEnFrancais(e.code);
+      }
+    });
+
+    btnDeco.addEventListener("click", () => signOut(auth));
+    btnDecoVendeur.addEventListener("click", () => signOut(auth));
+
+    // Identifiant du propriétaire des données : le vendeur travaille dans les données de son patron
+    function idProprietaire() {
+      return vendeurInfo ? vendeurInfo.proprietaireId : utilisateurActuel.uid;
+    }
+
+    function dossierBoutiques() {
+      return collection(db, "users", utilisateurActuel.uid, "boutiques");
+    }
+
+    function refBoutiqueActuelle() {
+      return doc(db, "users", idProprietaire(), "boutiques", boutiqueActuelle.id);
+    }
+
+    function dossierProduits() {
+      return collection(db, "users", idProprietaire(), "boutiques", boutiqueActuelle.id, "produits");
+    }
+
+    function dossierVentes() {
+      return collection(db, "users", idProprietaire(), "boutiques", boutiqueActuelle.id, "ventes");
+    }
+
+    function refVente(idVente) {
+      return doc(db, "users", idProprietaire(), "boutiques", boutiqueActuelle.id, "ventes", idVente);
+    }
+
+    // Alerte : il reste un quart (25 %) ou moins du total reçu
+    function enAlerte(stock, stockDepart) {
+      return Number.isInteger(stockDepart) && stockDepart > 0 && stock <= stockDepart * 0.25;
+    }
+
+    // Addition d'une liste de nombres
+    function somme(liste) {
+      return liste.reduce((a, b) => a + b, 0);
+    }
+
+    // Texte en minuscules et sans accents (pour la recherche)
+    function simplifier(texte) {
+      return String(texte || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    // Liste des entrées de stock d'un produit (ex. [50, 20]).
+    // Pour un ancien produit sans liste, on part du stock de départ.
+    function entreesDe(p) {
+      if (Array.isArray(p.entrees) && p.entrees.length > 0) return p.entrees;
+      if (Number.isInteger(p.stockDepart) && p.stockDepart > 0) return [p.stockDepart];
+      return p.stock > 0 ? [p.stock] : [];
+    }
+
+    // Une vente à crédit dont il reste de l'argent à recevoir
+    function estImpayee(v) {
+      return v.credit === true && Number(v.reste) > 0;
+    }
+
+    // Ajout d'une boutique (sans attendre le serveur : marche hors connexion)
+    btnAjouter.addEventListener("click", () => {
+      messageBoutique.textContent = "";
+      const nom = champNomBoutique.value.trim();
+      if (nom.length === 0) {
+        messageBoutique.textContent = "Écris le nom de la boutique.";
+        return;
+      }
+      addDoc(dossierBoutiques(), { nom: nom, creeLe: serverTimestamp() }).catch(() => {
+        messageBoutique.textContent = "Impossible d'ajouter la boutique. Réessaie.";
+      });
+      champNomBoutique.value = "";
+    });
+
+    async function supprimerBoutique(id) {
+      for (const nomDossier of ["produits", "ventes"]) {
+        const contenu = await getDocs(collection(db, "users", utilisateurActuel.uid, "boutiques", id, nomDossier));
+        const liste = contenu.docs;
+        for (let i = 0; i < liste.length; i += 400) {
+          const lot = writeBatch(db);
+          liste.slice(i, i + 400).forEach((d) => lot.delete(d.ref));
+          await lot.commit();
+        }
+      }
+      await deleteDoc(doc(db, "users", utilisateurActuel.uid, "boutiques", id));
+    }
+
+    // Liste des boutiques, avec la vue d'ensemble (ventes et argent de chaque boutique)
+    function afficherBoutiques(instantane) {
+      derniereInstantaneBoutiques = instantane;
+      listeBoutiques.innerHTML = "";
+      vueEnsemble.classList.add("cache");
+      ensembleFerme.classList.add("cache");
+      boutiquesActuelles = [];
+      if (instantane.empty) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucune boutique pour le moment.";
+        listeBoutiques.appendChild(vide);
+        return;
+      }
+
+      let nbBoutiques = 0;
+      let totalVentes = 0;
+      let totalArgent = 0;
+      let nbSansResume = 0;
+
+      instantane.forEach((d) => {
+        const data = d.data();
+        const nomBoutique = data.nom;
+        const aResume = Number.isInteger(data.nbVentes) && typeof data.totalVentes === "number";
+        boutiquesActuelles.push({ id: d.id, nom: nomBoutique });
+        nbBoutiques += 1;
+        if (aResume) {
+          totalVentes += data.nbVentes;
+          totalArgent += data.totalVentes;
+        } else {
+          nbSansResume += 1;
+        }
+
+        const li = document.createElement("li");
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const nom = document.createElement("strong");
+        nom.textContent = nomBoutique;
+        const detail = document.createElement("small");
+        detail.textContent = !abonnement.actif
+          ? "Résumé fermé (abonnement terminé)"
+          : aResume
+          ? data.nbVentes + (data.nbVentes > 1 ? " ventes" : " vente") + " · " + formaterFcfa(data.totalVentes)
+          : "Résumé pas encore calculé (ouvre la boutique une fois)";
+        info.appendChild(nom);
+        info.appendChild(detail);
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const btnOuvrir = document.createElement("button");
+        btnOuvrir.className = "petit";
+        btnOuvrir.textContent = "Ouvrir";
+        btnOuvrir.addEventListener("click", () => ouvrirBoutique(d.id, nomBoutique));
+
+        const btnSupprimer = document.createElement("button");
+        btnSupprimer.className = "petit danger";
+        btnSupprimer.textContent = "Supprimer";
+        btnSupprimer.addEventListener("click", async () => {
+          messageBoutique.textContent = "";
+          if (!navigator.onLine) {
+            messageBoutique.textContent = "Pour supprimer une boutique, connecte-toi à internet.";
+            return;
+          }
+          if (!confirm("Supprimer la boutique « " + nomBoutique + " », ses produits et ses ventes ?")) return;
+          try {
+            await supprimerBoutique(d.id);
+          } catch (e) {
+            messageBoutique.textContent = "Impossible de supprimer. Réessaie.";
+          }
+        });
+
+        actions.appendChild(btnOuvrir);
+        actions.appendChild(btnSupprimer);
+        li.appendChild(info);
+        li.appendChild(actions);
+        listeBoutiques.appendChild(li);
+      });
+
+      // Vue d'ensemble : toutes les boutiques ensemble
+      ensembleBoutiques.textContent = "Boutiques : " + nbBoutiques;
+      ensembleVentes.textContent = "Ventes : " + totalVentes;
+      ensembleArgent.textContent = "Argent encaissé : " + formaterFcfa(totalArgent);
+      ensembleNote.textContent = nbSansResume > 0
+        ? nbSansResume + (nbSansResume > 1 ? " boutiques pas encore comptées" : " boutique pas encore comptée")
+          + " : ouvre-" + (nbSansResume > 1 ? "les" : "la") + " une fois avec internet."
+        : "";
+      if (abonnement.actif) {
+        vueEnsemble.classList.remove("cache");
+      } else {
+        ensembleFerme.classList.remove("cache");
+      }
+    }
+
+    // ----- Mes vendeurs (employés) -----
+
+    // Remplit le choix de boutique du formulaire vendeur
+    function remplirChoixBoutiquesVendeur() {
+      champVendeurBoutique.innerHTML = "";
+      if (boutiquesActuelles.length === 0) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "Crée d'abord une boutique";
+        champVendeurBoutique.appendChild(option);
+        btnCreerVendeur.disabled = true;
+        return;
+      }
+      btnCreerVendeur.disabled = false;
+      boutiquesActuelles.forEach((b) => {
+        const option = document.createElement("option");
+        option.value = b.id;
+        option.textContent = b.nom;
+        champVendeurBoutique.appendChild(option);
+      });
+    }
+
+    function arreterEcouteDesVendeurs() {
+      if (arreterEcouteVendeurs) {
+        arreterEcouteVendeurs();
+        arreterEcouteVendeurs = null;
+      }
+    }
+
+    function ouvrirEcranVendeurs() {
+      messageVendeur.style.color = "";
+      messageVendeur.textContent = "";
+      messageLienVendeurs.textContent = "";
+      remplirChoixBoutiquesVendeur();
+      listeVendeurs.innerHTML = "";
+      montrer(ecranVendeurs);
+      arreterEcouteDesVendeurs();
+      arreterEcouteVendeurs = onSnapshot(
+        query(collection(db, "vendeurs"), where("proprietaireId", "==", utilisateurActuel.uid)),
+        afficherVendeurs,
+        () => { messageVendeur.textContent = "Impossible de charger tes vendeurs."; }
+      );
+  }    btnMesVendeurs.addEventListener("click", ouvrirEcranVendeurs);
+
+    btnRetourVendeurs.addEventListener("click", () => {
+      arreterEcouteDesVendeurs();
+      montrer(ecranAccueil);
+    });
+
+    function afficherVendeurs(instantane) {
+      listeVendeurs.innerHTML = "";
+      if (instantane.empty) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucun vendeur pour le moment.";
+        listeVendeurs.appendChild(vide);
+        return;
+      }
+      const vendeurs = instantane.docs.map((d) => ({ id: d.id, ...d.data() }));
+      vendeurs.sort((a, b) => String(a.nom || "").localeCompare(String(b.nom || ""), "fr"));
+      vendeurs.forEach((v) => {
+        const li = document.createElement("li");
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const nom = document.createElement("strong");
+        nom.textContent = v.nom;
+        const detail = document.createElement("small");
+        detail.textContent = v.email + " · " + (v.boutiqueNom || "boutique");
+        info.appendChild(nom);
+        info.appendChild(detail);
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+        const btnRetirer = document.createElement("button");
+        btnRetirer.className = "petit danger";
+        btnRetirer.textContent = "Retirer l'accès";
+        btnRetirer.addEventListener("click", async () => {
+          if (!confirm("Retirer l'accès de « " + v.nom + " » ? Il ne pourra plus enregistrer de ventes.")) return;
+          messageVendeur.style.color = "";
+          messageVendeur.textContent = "";
+          try {
+            await deleteDoc(doc(db, "vendeurs", v.id));
+          } catch (e) {
+            messageVendeur.textContent = "Impossible de retirer l'accès. Vérifie ta connexion.";
+          }
+        });
+        actions.appendChild(btnRetirer);
+
+        li.appendChild(info);
+        li.appendChild(actions);
+        listeVendeurs.appendChild(li);
+      });
+    }
+
+    // Création d'un vendeur : compte (email + mot de passe) puis fiche d'accès
+    btnCreerVendeur.addEventListener("click", async () => {
+      messageVendeur.style.color = "";
+      messageVendeur.textContent = "";
+      const nom = champVendeurNom.value.trim();
+      const email = champVendeurEmail.value.trim();
+      const mdp = champVendeurMdp.value;
+      const idBoutique = champVendeurBoutique.value;
+
+      if (nom.length === 0) {
+        messageVendeur.textContent = "Écris le nom du vendeur.";
+        return;
+      }
+      if (email.length === 0) {
+        messageVendeur.textContent = "Écris l'email du vendeur.";
+        return;
+      }
+      if (mdp.length < 6) {
+        messageVendeur.textContent = "Mot de passe trop court (6 caractères minimum).";
+        return;
+      }
+      if (!idBoutique) {
+        messageVendeur.textContent = "Choisis une boutique.";
+        return;
+      }
+      if (!navigator.onLine) {
+        messageVendeur.textContent = "Pour créer un vendeur, connecte-toi à internet.";
+        return;
+      }
+
+      const boutique = boutiquesActuelles.find((b) => b.id === idBoutique);
+      btnCreerVendeur.disabled = true;
+      let appSecondaire = null;
+      let compteCree = false;
+      try {
+        // Une 2e connexion à part, pour ne pas déconnecter le propriétaire
+        appSecondaire = initializeApp(firebaseConfig, "vendeur-" + Date.now());
+        const authSecondaire = getAuth(appSecondaire);
+        const cred = await createUserWithEmailAndPassword(authSecondaire, email, mdp);
+        compteCree = true;
+        await setDoc(doc(db, "vendeurs", cred.user.uid), {
+          proprietaireId: utilisateurActuel.uid,
+          boutiqueId: idBoutique,
+          boutiqueNom: boutique ? boutique.nom : "",
+          nom: nom,
+          email: email,
+          creeLe: serverTimestamp()
+        });
+        await signOut(authSecondaire);
+        champVendeurNom.value = "";
+        champVendeurEmail.value = "";
+        champVendeurMdp.value = "";
+        messageVendeur.style.color = "#1e8449";
+        messageVendeur.textContent = "Vendeur créé : « " + nom + " ». Donne-lui son email et son mot de passe.";
+      } catch (e) {
+        messageVendeur.style.color = "";
+        if (compteCree) {
+          messageVendeur.textContent = "Le compte a été créé, mais l'accès n'a pas pu être enregistré. Réessaie avec un autre email.";
+        } else {
+          messageVendeur.textContent = erreurEnFrancais(e.code);
+        }
+      }
+      if (appSecondaire) {
+        try { await deleteApp(appSecondaire); } catch (e) { /* rien */ }
+      }
+      btnCreerVendeur.disabled = boutiquesActuelles.length === 0;
+    });
+
+    function reinitialiserFormulaire() {
+      produitEnModification = null;
+      champNomProduit.value = "";
+      champPrix.value = "";
+      champStock.value = "";
+      champStock.placeholder = "Quantité en stock";
+      messageVoixPrix.textContent = "";
+      messageVoixStock.textContent = "";
+      aideStock.textContent = "";
+      aideStock.classList.add("cache");
+      titreFormulaire.textContent = "Ajouter un produit";
+      btnEnregistrerProduit.textContent = "Ajouter le produit";
+      btnAnnuler.classList.add("cache");
+      messageProduit.textContent = "";
+    }
+
+    function reinitialiserVente() {
+      champVenteQuantite.value = "";
+      messageVoixVente.textContent = "";
+      aideQuantite.textContent = "";
+      caseCredit.checked = false;
+      blocCredit.classList.add("cache");
+      champClient.value = "";
+      champTel.value = "";
+      messageVente.textContent = "";
+      messageVente.style.color = "";
+    }
+
+    function reinitialiserAffichageResume() {
+      resumeNb.textContent = "Nombre de ventes : …";
+      resumeTotal.textContent = "Argent encaissé : …";
+      resumeProduits.innerHTML = "";
+    }
+
+    // Ferme l'historique et efface les dates choisies
+    function reinitialiserHistorique() {
+      historiqueOuvert = false;
+      blocHistorique.classList.add("cache");
+      btnHistorique.textContent = "Voir l'historique complet";
+      histoDu.value = "";
+      histoAu.value = "";
+      histoTotal.textContent = "";
+      listeHistorique.innerHTML = "";
+    }
+
+    // Ferme la liste des ventes impayées
+    function reinitialiserImpayes() {
+      impayesOuverts = false;
+      blocImpayes.classList.add("cache");
+      btnImpayes.textContent = "Ventes impayées";
+      impayesTotal.textContent = "";
+      messageImpayes.textContent = "";
+      listeImpayes.innerHTML = "";
+    }
+
+    // Affiche le résumé cumulé de la boutique
+    function afficherResume(instantane) {
+      if (!instantane.exists()) return;
+      const b = instantane.data();
+      const aCompteurs = Number.isInteger(b.nbVentes) && typeof b.totalVentes === "number";
+      resumeActif = aCompteurs;
+      if (!aCompteurs) {
+        // Première ouverture avec ce résumé : on compte les ventes déjà faites
+        if (!resumeCalcule && navigator.onLine) {
+          resumeCalcule = true;
+          calculerResumeDepuisVentes();
+        }
+        return;
+      }
+      resumeNb.textContent = "Nombre de ventes : " + b.nbVentes;
+      resumeTotal.textContent = "Argent encaissé : " + formaterFcfa(b.totalVentes);
+    }
+
+    // L'argent encaissé compte les ventes payées et les paiements déjà reçus sur les ventes à crédit
+    async function calculerResumeDepuisVentes() {
+      try {
+        const refB = refBoutiqueActuelle();
+        const contenu = await getDocs(dossierVentes());
+        let nb = 0;
+        let total = 0;
+        contenu.forEach((d) => {
+          const v = d.data();
+          nb += 1;
+          total += v.credit === true ? (Number(v.paye) || 0) : (Number(v.total) || 0);
+        });
+        await updateDoc(refB, { nbVentes: nb, totalVentes: total });
+      } catch (e) {
+        resumeNb.textContent = "Impossible de calculer le résumé. Vérifie ta connexion.";
+        resumeTotal.textContent = "";
+        resumeCalcule = false;
+      }
+    }
+
+    function ouvrirBoutique(id, nom) {
+      boutiqueActuelle = { id: id, nom: nom };
+      titreBoutique.textContent = nom;
+      reinitialiserFormulaire();
+      reinitialiserVente();
+      reinitialiserAffichageResume();
+      reinitialiserHistorique();
+      reinitialiserImpayes();
+      champRecherche.value = "";
+      instantaneProduits = null;
+      ventesActuelles = [];
+      listeProduits.innerHTML = "";
+      listeVentes.innerHTML = "";
+      blocAlerte.classList.add("cache");
+      montrer(ecranBoutique);
+
+      if (arreterEcouteProduits) arreterEcouteProduits();
+      arreterEcouteProduits = onSnapshot(
+        query(dossierProduits(), orderBy("creeLe")),
+        afficherProduits,
+        () => { messageProduit.textContent = "Impossible de charger les produits."; }
+      );
+
+      // Toutes les ventes de la boutique (les plus récentes d'abord)
+      if (arreterEcouteVentes) arreterEcouteVentes();
+      arreterEcouteVentes = onSnapshot(
+        query(dossierVentes(), orderBy("creeLe", "desc")),
+        afficherVentes,
+        () => { messageVente.textContent = "Impossible de charger les ventes."; }
+      );
+
+      if (arreterEcouteResume) arreterEcouteResume();
+      resumeCalcule = false;
+      resumeActif = false;
+      arreterEcouteResume = onSnapshot(
+        refBoutiqueActuelle(),
+        afficherResume,
+        () => {
+          resumeNb.textContent = "Impossible de charger le résumé.";
+          resumeTotal.textContent = "";
+        }
+      );
+  }    function fermerBoutique() {
+      arreterDictee();
+      if (arreterEcouteProduits) {
+        arreterEcouteProduits();
+        arreterEcouteProduits = null;
+      }
+      if (arreterEcouteVentes) {
+        arreterEcouteVentes();
+        arreterEcouteVentes = null;
+      }
+      if (arreterEcouteResume) {
+        arreterEcouteResume();
+        arreterEcouteResume = null;
+      }
+      resumeActif = false;
+      boutiqueActuelle = null;
+      produitsActuels = [];
+      instantaneProduits = null;
+      ventesActuelles = [];
+      champRecherche.value = "";
+      reinitialiserFormulaire();
+      reinitialiserVente();
+      reinitialiserAffichageResume();
+      reinitialiserHistorique();
+      reinitialiserImpayes();
+      listeProduits.innerHTML = "";
+      listeVentes.innerHTML = "";
+      champVenteProduit.innerHTML = "";
+      blocAlerte.innerHTML = "";
+      blocAlerte.classList.add("cache");
+    }
+
+    btnRetour.addEventListener("click", () => {
+      fermerBoutique();
+      montrer(ecranAccueil);
+    });
+
+    function formaterFcfa(n) {
+      return Number(n).toLocaleString("fr-FR") + " FCFA";
+    }
+
+    function remplirListeVente() {
+      const choix = champVenteProduit.value;
+      champVenteProduit.innerHTML = "";
+      if (produitsActuels.length === 0) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = vendeurInfo ? "Aucun produit dans cette boutique" : "Ajoute d'abord un produit";
+        champVenteProduit.appendChild(option);
+        btnVendre.disabled = true;
+        return;
+      }
+      btnVendre.disabled = false;
+      produitsActuels.forEach((p) => {
+        const option = document.createElement("option");
+        option.value = p.id;
+        option.textContent = p.nom + " (stock : " + p.stock + ")";
+        champVenteProduit.appendChild(option);
+      });
+      if (choix && produitsActuels.some((p) => p.id === choix)) {
+        champVenteProduit.value = choix;
+      }
+    }
+
+    function afficherAlerte() {
+      blocAlerte.innerHTML = "";
+      const enBas = produitsActuels.filter((p) => enAlerte(p.stock, p.stockDepart));
+      if (enBas.length === 0) {
+        blocAlerte.classList.add("cache");
+        return;
+      }
+      const titreAlerte = document.createElement("strong");
+      titreAlerte.textContent = "⚠ Stock bas : à racheter";
+      blocAlerte.appendChild(titreAlerte);
+      enBas.forEach((p) => {
+        const ligne = document.createElement("div");
+        if (p.stock === 0) {
+          ligne.textContent = p.nom + " : rupture de stock (0 sur " + p.stockDepart + ")";
+        } else {
+          ligne.textContent = p.nom + " : il reste " + p.stock + " sur " + p.stockDepart;
+        }
+        blocAlerte.appendChild(ligne);
+      });
+      blocAlerte.classList.remove("cache");
+    }
+
+    // Reçoit les produits depuis la base, puis dessine la liste
+    function afficherProduits(instantane) {
+      produitsActuels = instantane.docs.map((d) => {
+        const data = d.data();
+        const entrees = entreesDe(data);
+        return {
+          id: d.id,
+          nom: data.nom,
+          prix: data.prix,
+          stock: data.stock,
+          entrees: entrees,
+          stockDepart: somme(entrees)
+        };
+      });
+      remplirListeVente();
+      afficherAlerte();
+      instantaneProduits = instantane;
+      dessinerListeProduits();
+    }
+
+    // Dessine la liste des produits, en tenant compte de la recherche
+    // (le vendeur voit la liste sans pouvoir modifier ni supprimer)
+    function dessinerListeProduits() {
+      listeProduits.innerHTML = "";
+      if (!instantaneProduits) return;
+      if (instantaneProduits.empty) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucun produit pour le moment.";
+        listeProduits.appendChild(vide);
+        return;
+      }
+      const mot = simplifier(champRecherche.value.trim());
+      let nbAffiches = 0;
+      instantaneProduits.forEach((d) => {
+        const p = d.data();
+        if (mot !== "" && !simplifier(p.nom).includes(mot)) return;
+        nbAffiches += 1;
+        const entrees = entreesDe(p);
+        const totalRecu = somme(entrees);
+        const li = document.createElement("li");
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const nom = document.createElement("strong");
+        nom.textContent = p.nom;
+        info.appendChild(nom);
+
+        if (enAlerte(p.stock, totalRecu)) {
+          const etiquette = document.createElement("span");
+          etiquette.className = "etiquette";
+          etiquette.textContent = p.stock === 0 ? "Rupture" : "Stock bas";
+          info.appendChild(etiquette);
+        }
+
+        const detail = document.createElement("small");
+        detail.textContent = formaterFcfa(p.prix) + " · Stock : " + p.stock;
+        info.appendChild(detail);
+
+        if (!vendeurInfo && entrees.length > 0) {
+          const ligneEntrees = document.createElement("small");
+          ligneEntrees.textContent = entrees.length > 1
+            ? "Entrées : " + entrees.join(" + ") + " = " + totalRecu
+            : "Entrées : " + totalRecu;
+          info.appendChild(ligneEntrees);
+        }
+
+        li.appendChild(info);
+
+        if (!vendeurInfo) {
+          const actions = document.createElement("div");
+          actions.className = "actions";
+
+          const btnModifier = document.createElement("button");
+          btnModifier.className = "petit";
+          btnModifier.textContent = "Modifier";
+          btnModifier.addEventListener("click", () => {
+            produitEnModification = d.id;
+            champNomProduit.value = p.nom;
+            champPrix.value = p.prix;
+            champStock.value = "";
+            champStock.placeholder = "Quantité à ajouter (+)";
+            messageVoixPrix.textContent = "";
+            messageVoixStock.textContent = "";
+            aideStock.textContent = "Stock actuel : " + p.stock + ". Écris la quantité à ajouter (laisse vide pour ne rien ajouter).";
+            aideStock.classList.remove("cache");
+            titreFormulaire.textContent = "Modifier le produit";
+            btnEnregistrerProduit.textContent = "Enregistrer les changements";
+            btnAnnuler.classList.remove("cache");
+            messageProduit.textContent = "";
+            champNomProduit.focus();
+          });
+
+          const btnSupprimer = document.createElement("button");
+          btnSupprimer.className = "petit danger";
+          btnSupprimer.textContent = "Supprimer";
+          btnSupprimer.addEventListener("click", () => {
+            if (!confirm("Supprimer le produit « " + p.nom + " » ?")) return;
+            messageProduit.textContent = "";
+            deleteDoc(doc(db, "users", idProprietaire(), "boutiques", boutiqueActuelle.id, "produits", d.id)).catch(() => {
+              messageProduit.textContent = "Impossible de supprimer. Réessaie.";
+            });
+            if (produitEnModification === d.id) reinitialiserFormulaire();
+          });
+
+          actions.appendChild(btnModifier);
+          actions.appendChild(btnSupprimer);
+          li.appendChild(actions);
+        }
+
+        listeProduits.appendChild(li);
+      });
+
+      if (nbAffiches === 0) {
+        const aucun = document.createElement("li");
+        aucun.className = "vide";
+        aucun.textContent = "Aucun produit ne correspond à ta recherche.";
+        listeProduits.appendChild(aucun);
+      }
+    }
+
+    // La liste se met à jour pendant qu'on écrit dans la case de recherche
+    champRecherche.addEventListener("input", dessinerListeProduits);
+
+    // Date d'une vente (une vente pas encore envoyée compte comme « maintenant »)
+    function dateDeVente(v) {
+      return v.creeLe && v.creeLe.toDate ? v.creeLe.toDate() : new Date();
+    }
+
+    // Texte ajouté à une vente à crédit dans les listes
+    function texteCredit(v) {
+      if (v.credit !== true) return "";
+      return " · crédit : " + (v.client || "client") + (Number(v.reste) > 0 ? " (reste " + formaterFcfa(v.reste) + ")" : "");
+    }
+
+    // Reçoit toutes les ventes, puis dessine les listes, le résumé et l'historique
+    function afficherVentes(instantane) {
+      ventesActuelles = instantane.docs.map((d) => ({ id: d.id, ...d.data() }));
+      dessinerListeVentes();
+      dessinerResumeProduits();
+      dessinerHistorique();
+      dessinerImpayes();
+    }
+
+    // Les 20 dernières ventes (avec le nom du vendeur quand il y en a un)
+    function dessinerListeVentes() {
+      listeVentes.innerHTML = "";
+      if (ventesActuelles.length === 0) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucune vente pour le moment.";
+        listeVentes.appendChild(vide);
+        return;
+      }
+      ventesActuelles.slice(0, 20).forEach((v) => {
+        const li = document.createElement("li");
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const titreVente = document.createElement("strong");
+        titreVente.textContent = v.quantite + " × " + v.nom;
+        const detail = document.createElement("small");
+        let quand = "à l'instant";
+        if (v.creeLe && v.creeLe.toDate) {
+          quand = v.creeLe.toDate().toLocaleString("fr-FR", {
+            day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
+          });
+        }
+        detail.textContent = formaterFcfa(v.total) + " · " + quand + (v.vendeurNom ? " · " + v.vendeurNom : "") + texteCredit(v);
+        info.appendChild(titreVente);
+        info.appendChild(detail);        li.appendChild(info);
+        listeVentes.appendChild(li);
+      });
+    }
+
+    // ----- Ventes impayées (ventes à crédit) -----
+
+    // Montre ou cache la liste, et met à jour le texte du bouton
+    function dessinerImpayes() {
+      listeImpayes.innerHTML = "";
+      const dettes = ventesActuelles.filter(estImpayee).reverse();
+      const totalReste = dettes.reduce((a, v) => a + Number(v.reste), 0);
+
+      let texteBouton = impayesOuverts ? "Masquer les ventes impayées" : "Ventes impayées";
+      if (dettes.length > 0) {
+        texteBouton += " (" + dettes.length + " · " + formaterFcfa(totalReste) + ")";
+      }
+      btnImpayes.textContent = texteBouton;
+      impayesTotal.textContent = dettes.length > 0
+        ? "Total à recevoir : " + formaterFcfa(totalReste) + " (" + dettes.length + (dettes.length > 1 ? " ventes" : " vente") + ")"
+        : "";
+
+      if (!impayesOuverts) return;
+
+      if (dettes.length === 0) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucune vente impayée.";
+        listeImpayes.appendChild(vide);
+        return;
+      }
+
+      dettes.forEach((v) => {
+        const li = document.createElement("li");
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const client = document.createElement("strong");
+        client.textContent = (v.client || "Client") + (v.clientTel ? " · " + v.clientTel : "");
+        const ligneProduit = document.createElement("small");
+        ligneProduit.textContent = v.quantite + " × " + v.nom + " · total " + formaterFcfa(v.total);
+        const ligneReste = document.createElement("small");
+        ligneReste.textContent = "Déjà payé : " + formaterFcfa(Number(v.paye) || 0) + " · Reste : " + formaterFcfa(v.reste);
+        const ligneDate = document.createElement("small");
+        ligneDate.textContent = dateDeVente(v).toLocaleString("fr-FR", {
+          day: "2-digit", month: "2-digit", year: "numeric"
+        }) + (v.vendeurNom ? " · " + v.vendeurNom : "");
+        info.appendChild(client);
+        info.appendChild(ligneProduit);
+        info.appendChild(ligneReste);
+        info.appendChild(ligneDate);
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const btnEncaisser = document.createElement("button");
+        btnEncaisser.className = "petit vert";
+        btnEncaisser.textContent = "Encaisser";
+        btnEncaisser.addEventListener("click", () => encaisserDette(v));
+
+        const btnEffacer = document.createElement("button");
+        btnEffacer.className = "petit danger";
+        btnEffacer.textContent = "Effacer";
+        btnEffacer.addEventListener("click", () => effacerDette(v));
+
+        actions.appendChild(btnEncaisser);
+        actions.appendChild(btnEffacer);
+        li.appendChild(info);
+        li.appendChild(actions);
+        listeImpayes.appendChild(li);
+      });
+    }
+
+    btnImpayes.addEventListener("click", () => {
+      if (vendeurInfo) return;
+      impayesOuverts = !impayesOuverts;
+      blocImpayes.classList.toggle("cache", !impayesOuverts);
+      messageImpayes.textContent = "";
+      dessinerImpayes();
+    });
+
+    // Le client paie une partie ou la totalité de ce qu'il doit
+    function encaisserDette(v) {
+      if (vendeurInfo) return;
+      messageImpayes.style.color = "";
+      messageImpayes.textContent = "";
+      const reste = Number(v.reste);
+      const saisie = prompt(
+        "Combien « " + (v.client || "le client") + " » paie-t-il maintenant ? (reste à payer : " + formaterFcfa(reste) + ")",
+        String(reste)
+      );
+      if (saisie === null) return;
+      const montant = Number(String(saisie).replace(/\s/g, ""));
+      if (!Number.isInteger(montant) || montant < 1 || montant > reste) {
+        messageImpayes.textContent = "Montant invalide : écris un nombre entier entre 1 et " + reste + ".";
+        return;
+      }
+
+      const lot = writeBatch(db);
+      lot.update(refVente(v.id), {
+        paye: increment(montant),
+        reste: increment(-montant),
+        dernierPaiement: serverTimestamp()
+      });
+      if (resumeActif) {
+        lot.update(refBoutiqueActuelle(), { totalVentes: increment(montant) });
+      }
+      lot.commit().catch(() => {
+        messageImpayes.style.color = "";
+        messageImpayes.textContent = "Le paiement n'a pas pu être enregistré. Réessaie.";
+      });
+
+      messageImpayes.style.color = "#1e8449";
+      messageImpayes.textContent = montant === reste
+        ? "Dette soldée : " + (v.client || "le client") + " a tout payé (" + formaterFcfa(montant) + ")."
+        : "Paiement enregistré : " + formaterFcfa(montant) + ". Il reste " + formaterFcfa(reste - montant) + ".";
+    }
+
+    // On abandonne la dette : l'argent n'est pas compté dans les encaissements
+    function effacerDette(v) {
+      if (vendeurInfo) return;
+      messageImpayes.style.color = "";
+      messageImpayes.textContent = "";
+      if (!confirm("Effacer la dette de « " + (v.client || "ce client") + " » (reste " + formaterFcfa(v.reste) + ") ? L'argent ne sera pas compté dans tes encaissements.")) return;
+      updateDoc(refVente(v.id), { reste: 0, abandonne: true }).catch(() => {
+        messageImpayes.textContent = "Impossible d'effacer la dette. Réessaie.";
+      });
+    }
+
+    // Historique complet : toutes les ventes, avec choix des dates
+    function dessinerHistorique() {
+      listeHistorique.innerHTML = "";
+      histoTotal.textContent = "";
+      if (!historiqueOuvert) return;
+
+      const du = histoDu.value ? new Date(histoDu.value + "T00:00:00") : null;
+      const au = histoAu.value ? new Date(histoAu.value + "T23:59:59.999") : null;
+      const choisies = ventesActuelles.filter((v) => {
+        const quand = dateDeVente(v);
+        if (du && quand < du) return false;
+        if (au && quand > au) return false;
+        return true;
+      });
+
+      if (choisies.length === 0) {
+        const vide = document.createElement("li");
+        vide.className = "vide";
+        vide.textContent = "Aucune vente pour cette période.";
+        listeHistorique.appendChild(vide);
+        return;
+      }
+
+      const total = choisies.reduce((a, v) => a + (Number(v.total) || 0), 0);
+      histoTotal.textContent = choisies.length + (choisies.length > 1 ? " ventes" : " vente") + " · " + formaterFcfa(total);
+
+      choisies.slice(0, 300).forEach((v) => {
+        const li = document.createElement("li");
+        const info = document.createElement("div");
+        info.className = "info";
+        const titreVente = document.createElement("strong");
+        titreVente.textContent = v.quantite + " × " + v.nom;
+        const detail = document.createElement("small");
+        detail.textContent = formaterFcfa(v.total) + " · " + dateDeVente(v).toLocaleString("fr-FR", {
+          day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit"
+        }) + (v.vendeurNom ? " · " + v.vendeurNom : "") + texteCredit(v);
+        info.appendChild(titreVente);
+        info.appendChild(detail);
+        li.appendChild(info);
+        listeHistorique.appendChild(li);
+      });
+
+      if (choisies.length > 300) {
+        const note = document.createElement("li");
+        note.className = "vide";
+        note.textContent = "Affichage des 300 ventes les plus récentes. Le total ci-dessus compte toutes les ventes de la période.";
+        listeHistorique.appendChild(note);
+      }
+    }
+
+    btnHistorique.addEventListener("click", () => {
+      historiqueOuvert = !historiqueOuvert;
+      blocHistorique.classList.toggle("cache", !historiqueOuvert);
+      btnHistorique.textContent = historiqueOuvert ? "Masquer l'historique" : "Voir l'historique complet";
+      dessinerHistorique();
+    });
+
+    histoDu.addEventListener("change", dessinerHistorique);
+    histoAu.addEventListener("change", dessinerHistorique);
+
+    btnHistoToutes.addEventListener("click", () => {
+      histoDu.value = "";
+      histoAu.value = "";
+      dessinerHistorique();
+    });
+
+    // Résumé par produit : nombre vendu et valeur des ventes pour chaque produit
+    function dessinerResumeProduits() {
+      resumeProduits.innerHTML = "";
+      if (ventesActuelles.length === 0) return;
+      const groupes = {};
+      ventesActuelles.forEach((v) => {
+        const cle = v.produitId || v.nom;
+        if (!groupes[cle]) groupes[cle] = { nom: v.nom, quantite: 0, total: 0 };
+        groupes[cle].quantite += Number(v.quantite) || 0;
+        groupes[cle].total += Number(v.total) || 0;
+      });
+      const titreProduits = document.createElement("strong");
+      titreProduits.textContent = "Par produit :";
+      resumeProduits.appendChild(titreProduits);
+      Object.values(groupes)
+        .sort((a, b) => b.total - a.total)
+        .forEach((g) => {
+          const ligne = document.createElement("div");
+          ligne.textContent = g.nom + " : " + g.quantite + (g.quantite > 1 ? " vendus, " : " vendu, ") + formaterFcfa(g.total);
+          resumeProduits.appendChild(ligne);
+        });
+    }
+
+    // Quantité vendue : un nombre, ou plusieurs nombres séparés par + (ex. 3+15)
+    function lireQuantites() {
+      const parties = champVenteQuantite.value.replace(/\s/g, "").split("+");
+      const valide = parties.every((x) => /^[0-9]+$/.test(x));
+      return { parties: parties, valide: valide, total: valide ? somme(parties.map(Number)) : 0 };
+    }
+
+    // Affiche le total pendant qu'on écrit (ex. 3+15 → Total : 18)
+    champVenteQuantite.addEventListener("input", () => {
+      const q = lireQuantites();
+      aideQuantite.textContent = (q.valide && q.parties.length > 1) ? "Total : " + q.total : "";
+    });
+
+    // Bouton « + Ajouter une autre quantité » : ajoute le signe + à la fin
+    btnPlus.addEventListener("click", () => {
+      let texte = champVenteQuantite.value.replace(/\s/g, "");
+      if (texte !== "" && !texte.endsWith("+")) {
+        texte += "+";
+      }
+      champVenteQuantite.value = texte;
+      champVenteQuantite.focus();
+    });
