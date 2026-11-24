@@ -123,7 +123,9 @@
     <img src="logo.png" alt="Logo Alkao">
     <h1>Gestionnaire de boutique</h1>
   </header>
+
   <div id="bandeau-hors-ligne" class="bandeau cache">Hors connexion : tes ventes restent sur ce téléphone et seront envoyées dès le retour d'internet.</div>
+
   <main>
     <div id="ecran-connexion" class="carte">
       <h2 id="titre">Connexion</h2>
@@ -133,6 +135,7 @@
       <button id="btn-bascule" class="lien">Pas de compte ? Créer un compte</button>
       <p id="message"></p>
     </div>
+
     <section id="presentation" class="carte presentation">
       <h2>Alkao Shop : application de gestion de boutique et de stock sur téléphone</h2>
       <p>Alkao Shop est une application de gestion de boutique pour les commerçants et les boutiquiers d'Afrique francophone : au Togo, au Bénin, au Burkina Faso, au Mali, en Côte d'Ivoire, au Sénégal, au Niger et en Guinée-Bissau (zone UEMOA). Elle remplace le cahier de ventes : vous suivez votre stock, vous enregistrez vos ventes et vous savez à tout moment combien vous avez encaissé, en FCFA, depuis votre téléphone.</p>      <h3>Application de gestion de stock pour votre boutique</h3>
@@ -956,7 +959,7 @@
         "auth/too-many-requests": "Trop d'essais. Attends un moment."
       };
       return erreurs[code] || "Une erreur est survenue. Réessaie.";
-  }    btnBascule.addEventListener("click", () => {
+    }    btnBascule.addEventListener("click", () => {
       modeInscription = !modeInscription;
       message.textContent = "";
       if (modeInscription) {
@@ -1205,7 +1208,7 @@
         afficherVendeurs,
         () => { messageVendeur.textContent = "Impossible de charger tes vendeurs."; }
       );
-  }    btnMesVendeurs.addEventListener("click", ouvrirEcranVendeurs);
+    }    btnMesVendeurs.addEventListener("click", ouvrirEcranVendeurs);
 
     btnRetourVendeurs.addEventListener("click", () => {
       arreterEcouteDesVendeurs();
@@ -1461,7 +1464,7 @@
           resumeTotal.textContent = "";
         }
       );
-  }    function fermerBoutique() {
+    }    function fermerBoutique() {
       arreterDictee();
       if (arreterEcouteProduits) {
         arreterEcouteProduits();
@@ -1956,4 +1959,300 @@
       }
       champVenteQuantite.value = texte;
       champVenteQuantite.focus();
+    });    // Case « Vente à crédit » : montre ou cache les champs du client
+    caseCredit.addEventListener("change", () => {
+      blocCredit.classList.toggle("cache", !caseCredit.checked);
+      if (caseCredit.checked) champClient.focus();
     });
+
+    // Enregistrement d'une vente (sans attendre le serveur : marche hors connexion)
+    btnVendre.addEventListener("click", () => {
+      messageVente.style.color = "";
+      messageVente.textContent = "";
+      const idProduit = champVenteProduit.value;
+      const q = lireQuantites();
+      const quantite = q.total;
+      const credit = caseCredit.checked;
+      const client = champClient.value.trim();
+      const clientTel = champTel.value.trim();
+
+      if (!idProduit) {
+        messageVente.textContent = "Choisis un produit.";
+        return;
+      }
+      if (!q.valide || quantite < 1 || quantite > 1000000) {
+        messageVente.textContent = "Quantité invalide : écris un nombre entier (ex. 3 ou 3+15).";
+        return;
+      }
+      if (credit && client.length === 0) {
+        messageVente.textContent = "Écris le nom du client pour une vente à crédit.";
+        return;
+      }
+
+      const p = produitsActuels.find((x) => x.id === idProduit);
+      if (!p) {
+        messageVente.textContent = "Ce produit n'existe plus.";
+        return;
+      }
+      if (p.stock < quantite) {
+        messageVente.textContent = "Stock insuffisant : il reste " + p.stock + ".";
+        return;
+      }
+
+      const total = p.prix * quantite;
+      const restant = p.stock - quantite;
+      const refProduit = doc(db, "users", idProprietaire(), "boutiques", boutiqueActuelle.id, "produits", idProduit);
+      const refNouvelleVente = doc(dossierVentes());
+
+      const donneesVente = {
+        produitId: idProduit,
+        nom: p.nom,
+        prix: p.prix,
+        quantite: quantite,
+        total: total,
+        creeLe: serverTimestamp()
+      };
+      // Vente à crédit : le client n'a pas encore payé
+      if (credit) {
+        donneesVente.credit = true;
+        donneesVente.client = client;
+        if (clientTel) donneesVente.clientTel = clientTel;
+        donneesVente.paye = 0;
+        donneesVente.reste = total;
+      }
+      // Le nom du vendeur est gardé sur chaque vente qu'il enregistre
+      if (vendeurInfo) {
+        donneesVente.vendeurId = utilisateurActuel.uid;
+        donneesVente.vendeurNom = vendeurInfo.nom;
+      }
+
+      const lot = writeBatch(db);
+      lot.update(refProduit, { stock: increment(-quantite), modifieLe: serverTimestamp() });
+      lot.set(refNouvelleVente, donneesVente);
+      if (resumeActif) {
+        // À crédit : la vente compte, mais l'argent n'est encaissé qu'au paiement
+        lot.update(refBoutiqueActuelle(), {
+          nbVentes: increment(1),
+          totalVentes: increment(credit ? 0 : total)
+        });
+      }
+      lot.commit().catch(() => {
+        messageVente.style.color = "";
+        messageVente.textContent = "Cette vente n'a pas pu être enregistrée. Vérifie la liste des ventes.";
+      });
+
+      champVenteQuantite.value = "";
+      messageVoixVente.textContent = "";
+      aideQuantite.textContent = "";
+      caseCredit.checked = false;
+      blocCredit.classList.add("cache");
+      champClient.value = "";
+      champTel.value = "";
+      let texte = (credit ? "Vente à crédit enregistrée : " : "Vente enregistrée : ") + quantite + " × " + p.nom;
+      if (q.parties.length > 1) {
+        texte += " (" + q.parties.join(" + ") + ")";
+      }
+      texte += " = " + formaterFcfa(total);
+      if (credit) {
+        texte += " (à payer par " + client + ")";
+      }
+      if (enAlerte(restant, p.stockDepart)) {
+        texte += restant === 0
+          ? " ⚠ Rupture de stock !"
+          : " ⚠ Stock bas : il ne reste que " + restant + ".";
+        messageVente.style.color = "#b9770e";
+      } else {
+        messageVente.style.color = "#1e8449";
+      }
+      if (!navigator.onLine) {
+        texte += " (sera envoyée au retour d'internet)";
+      }
+      messageVente.textContent = texte;
+    });
+
+    // Tout remettre à zéro : efface les ventes payées (liste et résumé)
+    // Les ventes impayées sont gardées. Le stock et les produits ne changent pas. Demande internet.
+    btnReinitResume.addEventListener("click", async () => {
+      messageVente.style.color = "";
+      messageVente.textContent = "";
+      if (vendeurInfo) return;
+      if (!navigator.onLine) {
+        messageVente.textContent = "Pour tout remettre à zéro, connecte-toi à internet.";
+        return;
+      }
+      if (!confirm("Effacer toutes les ventes payées (la liste et le résumé) et repartir de zéro ? Les ventes impayées sont gardées. Le stock et les produits ne changent pas. Cette action est définitive.")) return;
+      btnReinitResume.disabled = true;
+      try {
+        const refB = refBoutiqueActuelle();
+        const contenu = await getDocs(dossierVentes());
+        const aSupprimer = [];
+        const aGarder = [];
+        contenu.docs.forEach((d) => {
+          if (estImpayee(d.data())) {
+            aGarder.push(d.data());
+          } else {
+            aSupprimer.push(d);
+          }
+        });
+        for (let i = 0; i < aSupprimer.length; i += 400) {
+          const lot = writeBatch(db);
+          aSupprimer.slice(i, i + 400).forEach((d) => lot.delete(d.ref));
+          await lot.commit();
+        }
+        const dejaPaye = aGarder.reduce((a, v) => a + (Number(v.paye) || 0), 0);
+        await updateDoc(refB, {
+          nbVentes: aGarder.length,
+          totalVentes: dejaPaye,
+          resumeRemisLe: serverTimestamp()
+        });
+        messageVente.style.color = "#1e8449";
+        messageVente.textContent = aGarder.length > 0
+          ? "Ventes payées effacées. " + aGarder.length + (aGarder.length > 1 ? " ventes impayées sont gardées." : " vente impayée est gardée.")
+          : "Ventes effacées : tout repart de zéro.";
+      } catch (e) {
+        messageVente.style.color = "";
+        messageVente.textContent = "Impossible de tout remettre à zéro. Vérifie ta connexion.";
+      }
+      btnReinitResume.disabled = false;
+    });
+
+    btnAnnuler.addEventListener("click", reinitialiserFormulaire);
+
+    // Ajout ou modification d'un produit (sans attendre le serveur)
+    btnEnregistrerProduit.addEventListener("click", () => {
+      messageProduit.textContent = "";
+      if (vendeurInfo) return;
+      const nom = champNomProduit.value.trim();
+      const prix = Number(champPrix.value);
+
+      if (nom.length === 0) {
+        messageProduit.textContent = "Écris le nom du produit.";
+        return;
+      }
+      if (champPrix.value === "" || !Number.isInteger(prix) || prix < 0 || prix > 100000000) {
+        messageProduit.textContent = "Prix invalide : écris un nombre entier en FCFA.";
+        return;
+      }
+
+      if (produitEnModification) {
+        // Modification : la quantité écrite est AJOUTÉE au stock
+        const actuel = produitsActuels.find((x) => x.id === produitEnModification);
+        if (!actuel) {
+          messageProduit.textContent = "Ce produit n'existe plus.";
+          return;
+        }
+        const ajout = champStock.value === "" ? 0 : Number(champStock.value);
+        if (!Number.isInteger(ajout) || ajout < 0 || ajout > 1000000) {
+          messageProduit.textContent = "Quantité invalide : écris un nombre entier à ajouter.";
+          return;
+        }
+        const nouvellesEntrees = ajout > 0 ? actuel.entrees.concat([ajout]) : actuel.entrees;
+        updateDoc(
+          doc(db, "users", idProprietaire(), "boutiques", boutiqueActuelle.id, "produits", produitEnModification),
+          {
+            nom: nom,
+            prix: prix,
+            stock: increment(ajout),
+            stockDepart: somme(nouvellesEntrees),
+            entrees: nouvellesEntrees,
+            modifieLe: serverTimestamp()
+          }
+        ).catch(() => {
+          messageProduit.textContent = "Impossible d'enregistrer. Réessaie.";
+        });
+        reinitialiserFormulaire();
+        return;
+      }
+
+      // Nouveau produit : la quantité écrite est la première entrée
+      const stock = Number(champStock.value);
+      if (champStock.value === "" || !Number.isInteger(stock) || stock < 0 || stock > 1000000) {
+        messageProduit.textContent = "Stock invalide : écris un nombre entier.";
+        return;
+      }
+      addDoc(dossierProduits(), {
+        nom: nom,
+        prix: prix,
+        stock: stock,
+        stockDepart: stock,
+        entrees: stock > 0 ? [stock] : [],
+        creeLe: serverTimestamp()
+      }).catch(() => {
+        messageProduit.textContent = "Impossible d'enregistrer. Réessaie.";
+      });
+      reinitialiserFormulaire();
+    });
+
+    // Connexion / déconnexion : propriétaire ou vendeur ?
+    onAuthStateChanged(auth, async (utilisateur) => {
+      if (arreterEcouteBoutiques) {
+        arreterEcouteBoutiques();
+        arreterEcouteBoutiques = null;
+      }
+      arreterAbonnement();
+      abonnement = { actif: true, type: "charge", jours: 0, date: null };
+      creationEssaiEnvoyee = false;
+      derniereInstantaneBoutiques = null;
+      blocAbo.classList.add("cache");
+      aboDetail.classList.add("cache");
+      messageAbo.textContent = "";
+      champCodeAbo.value = "";
+      arreterEcouteDesVendeurs();
+      fermerBoutique();
+      vendeurInfo = null;
+      appliquerModeVendeur(false);
+      boutiquesActuelles = [];
+      utilisateurActuel = utilisateur;
+      messageLien.textContent = "";
+
+      if (!utilisateur) {
+        montrer(ecranConnexion);
+        listeBoutiques.innerHTML = "";
+        listeVendeurs.innerHTML = "";
+        vueEnsemble.classList.add("cache");
+        ensembleFerme.classList.add("cache");
+        champMdp.value = "";
+        return;
+      }
+
+      // Est-ce un vendeur ? (une fiche existe à son nom)
+      let fiche = null;
+      try {
+        const instantane = await getDoc(doc(db, "vendeurs", utilisateur.uid));
+        if (instantane.exists()) fiche = instantane.data();
+      } catch (e) {
+        fiche = null;
+      }
+      if (utilisateurActuel !== utilisateur) return;
+
+      if (fiche) {
+        vendeurInfo = {
+          proprietaireId: fiche.proprietaireId,
+          boutiqueId: fiche.boutiqueId,
+          nom: fiche.nom
+        };
+        appliquerModeVendeur(true);
+        lireAbonnementDuPatron(fiche.proprietaireId);
+        infoVendeur.textContent = "Vendeur : " + fiche.nom;
+        ouvrirBoutique(fiche.boutiqueId, fiche.boutiqueNom || "Boutique");
+        return;
+      }
+
+      // Propriétaire
+      qui.textContent = "Bienvenue !";
+      montrer(ecranAccueil);
+      demarrerAbonnement();
+      const requete = query(dossierBoutiques(), orderBy("creeLe"));
+      arreterEcouteBoutiques = onSnapshot(
+        requete,
+        afficherBoutiques,
+        () => { messageBoutique.textContent = "Impossible de charger tes boutiques."; }
+      );
+    });
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js");
+    }
+  </script>
+</body>
+</html>
